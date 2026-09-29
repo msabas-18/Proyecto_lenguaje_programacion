@@ -6,7 +6,7 @@ GAME_GRID (10, 20)
 # --- Definicion de las Piezas ---
 DEFINE SHAPE I_PIECE:
   STATE 1:
-    [0, 1, 0, 0]
+    [0, 0, 1, 0]
     [0, 1, 0, 0]
     [0, 1, 0, 0]
     [0, 1, 0, 0]
