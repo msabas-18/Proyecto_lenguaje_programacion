@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
 # runtime.py (VERSION CON INTERFAZ GRAFICA USANDO Tkinter y caracteres ASCII unicamente)
+#
+# CAMBIOS ACTIVIDAD 3 (Tetris remake): el color de cada pieza se lee del JSON ("colors")
+# en lugar de estar fijo en el codigo. Si el JSON no trae colores (juegos viejos) se usa
+# el color por defecto, por lo que los .json antiguos siguen funcionando.
 
 import sys
 import json
@@ -11,6 +15,9 @@ import tkMessageBox # Necesario para el GAME OVER
 # Quitamos os y msvcrt ya que la GUI maneja el dibujo y el input
 # import os
 # import msvcrt 
+
+# NUEVO: color por defecto de una pieza si el .brick no define COLOR
+COLOR_PIEZA_DEFECTO = '#00FFFF'
 
 class Juego:
     def __init__(self, datos_juego):
@@ -53,6 +60,7 @@ class Juego:
         
         if self.tipo_juego == 'TETRIS':
             self.pieza_actual = None
+            self.pieza_color = COLOR_PIEZA_DEFECTO  # NUEVO: color de la pieza activa
             self.pieza_x, self.pieza_y, self.pieza_rotacion = 0, 0, 0
             self.velocidad_gravedad = 0.4
         
@@ -120,25 +128,30 @@ class Juego:
         self.label_score.config(text="PUNTUACION\n" + str(self.puntuacion))
         
         # Colores
-        COLOR_GRID_FIJA = '#343434' # Gris oscuro para las celdas fijadas (Tetris)
-        COLOR_PIEZA = '#00FFFF'     # Cyan para la pieza activa (Tetris)
+        COLOR_GRID_FIJA = '#343434' # Gris oscuro para celdas fijadas sin color propio (compatibilidad)
         COLOR_SNAKE_CABEZA = '#00FF00' # Verde brillante
         COLOR_SNAKE_CUERPO = '#33CC33' # Verde normal
         COLOR_FOOD = '#FF0000'      # Rojo
         
         # 1. Dibujar la cuadricula estatica (grid base)
+        # NUEVO: cada celda fijada guarda el color de su pieza (texto '#RRGGBB').
+        # Si vale 1 (valor antiguo) se dibuja en gris como antes.
         for y in range(self.alto):
             for x in range(self.ancho):
-                if self.grid[y][x] == 1:
-                     self.dibujar_celda(x, y, COLOR_GRID_FIJA)
+                celda = self.grid[y][x]
+                if celda:
+                    if isinstance(celda, basestring):
+                        self.dibujar_celda(x, y, celda)
+                    else:
+                        self.dibujar_celda(x, y, COLOR_GRID_FIJA)
 
-        # 2. Dibujar la pieza actual de Tetris
+        # 2. Dibujar la pieza actual de Tetris (con su color dinamico)
         if self.tipo_juego == 'TETRIS' and self.pieza_actual:
             matriz_pieza = self.pieza_actual[self.pieza_rotacion]
             for y_offset, fila in enumerate(matriz_pieza):
                 for x_offset, celda in enumerate(fila):
                     if celda == 1:
-                        self.dibujar_celda(self.pieza_x + x_offset, self.pieza_y + y_offset, COLOR_PIEZA)
+                        self.dibujar_celda(self.pieza_x + x_offset, self.pieza_y + y_offset, self.pieza_color)
         
         # 3. Dibujar Snake y Comida
         if self.tipo_juego == 'SNAKE':
@@ -185,6 +198,8 @@ class Juego:
     def tetris_spawn_pieza(self):
         nombre_pieza = random.choice(self.datos_juego['shapes'].keys())
         self.pieza_actual = self.datos_juego['shapes'][nombre_pieza]
+        # NUEVO: leer el color de la pieza desde el JSON (con valor por defecto si no existe)
+        self.pieza_color = self.datos_juego.get('colors', {}).get(nombre_pieza, COLOR_PIEZA_DEFECTO)
         self.pieza_x, self.pieza_y, self.pieza_rotacion = self.ancho / 2 - 2, 0, 0
         if self.tetris_verificar_colision(self.pieza_x, self.pieza_y, self.pieza_rotacion):
             self.juego_terminado = True
@@ -213,7 +228,8 @@ class Juego:
             for x_offset, celda in enumerate(fila):
                 if celda == 1:
                     if 0 <= self.pieza_y + y_offset < self.alto and 0 <= self.pieza_x + x_offset < self.ancho:
-                        self.grid[self.pieza_y + y_offset][self.pieza_x + x_offset] = 1
+                        # NUEVO: la celda fijada conserva el color de su pieza (antes guardaba 1)
+                        self.grid[self.pieza_y + y_offset][self.pieza_x + x_offset] = self.pieza_color
         self.pieza_actual = None
         self.tetris_limpiar_lineas()
         self.ejecutar_evento('ON_START')
@@ -305,4 +321,3 @@ if __name__ == "__main__":
         sys.exit(1)
     juego = Juego(datos_juego)
     juego.run()
-    

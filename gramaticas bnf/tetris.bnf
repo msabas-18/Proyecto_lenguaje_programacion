@@ -5,7 +5,10 @@
 <definiciones> ::= <definicion_shape> | <definicion_shape> <definiciones>
 <eventos>    ::= <evento> | <evento> <eventos>
 
-<definicion_shape> ::= "DEFINE" "SHAPE" <identificador> ":" <estados> "END"
+<definicion_shape> ::= "DEFINE" "SHAPE" <identificador> ":" <atributos_shape> <estados> "END"
+<atributos_shape>  ::= "" | <atributo_color>
+<atributo_color>   ::= "COLOR" ":" <color_hex>
+<color_hex>        ::= "#" <hex> <hex> <hex> <hex> <hex> <hex> | "#" <hex> <hex> <hex>
 <estados>          ::= <estado> | <estado> <estados>
 <estado>           ::= "STATE" <numero> ":" <matriz>
 <matriz>           ::= <fila> | <fila> <matriz>
@@ -27,3 +30,4 @@
 <numero>        ::= <digito> | <digito> <numero>
 <letra>         ::= "A"..."Z" | "_"
 <digito>        ::= "0"..."9"
+<hex>           ::= <digito> | "A"..."F" | "a"..."f"
