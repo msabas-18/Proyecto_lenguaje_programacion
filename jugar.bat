@@ -8,6 +8,7 @@ REM Verifica si se proporciono un nombre de juego.
 if "%1"=="" (
     echo.
     echo  Uso: jugar [nombre_del_juego]
+    echo  Ejemplo: jugar tetris_remake
     echo  Ejemplo: jugar snake
     echo  Ejemplo: jugar tetris
     echo.

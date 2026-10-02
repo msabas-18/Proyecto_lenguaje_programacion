@@ -55,7 +55,16 @@ class Juego:
             self.pieza_actual = None
             self.pieza_x, self.pieza_y, self.pieza_rotacion = 0, 0, 0
             self.velocidad_gravedad = 0.4
-        
+            self.velocidad_base = self.velocidad_gravedad
+            self.pieza_color = '#00FFFF'
+            self.pieza_powerup = None
+            self.piezas_lentas = 0
+            self.slow_div = 2
+            self.powerups = self.datos_juego.get('powerups', {})
+            self.contadores = {}
+        for nombre in self.powerups:
+            self.contadores[nombre] = {'LINES_CLEARED': 0, 'PIECES_SPAWNED': 0, 'ROTATIONS': 0}
+
         if self.tipo_juego == 'SNAKE':
             self.serpiente_cuerpo = []
             self.serpiente_direccion = (1, 0)
@@ -138,7 +147,7 @@ class Juego:
             for y_offset, fila in enumerate(matriz_pieza):
                 for x_offset, celda in enumerate(fila):
                     if celda == 1:
-                        self.dibujar_celda(self.pieza_x + x_offset, self.pieza_y + y_offset, COLOR_PIEZA)
+                        self.dibujar_celda(self.pieza_x + x_offset, self.pieza_y + y_offset, self.pieza_color)
         
         # 3. Dibujar Snake y Comida
         if self.tipo_juego == 'SNAKE':
@@ -183,6 +192,9 @@ class Juego:
     # ---------------------------------------------------------------------
 
     def tetris_spawn_pieza(self):
+        if self.tetris_spawn_powerup():
+            return
+        self.tetris_preparar_normal()
         nombre_pieza = random.choice(self.datos_juego['shapes'].keys())
         self.pieza_actual = self.datos_juego['shapes'][nombre_pieza]
         self.pieza_x, self.pieza_y, self.pieza_rotacion = self.ancho / 2 - 2, 0, 0
@@ -208,6 +220,7 @@ class Juego:
             self.pieza_rotacion = nueva_rotacion
 
     def tetris_fijar_pieza(self):
+        self.tetris_aplicar_efecto()
         matriz_pieza = self.pieza_actual[self.pieza_rotacion]
         for y_offset, fila in enumerate(matriz_pieza):
             for x_offset, celda in enumerate(fila):
@@ -234,8 +247,53 @@ class Juego:
         lineas_limpias = self.alto - len(nuevo_grid)
         if lineas_limpias > 0:
             self.grid = [[0] * self.ancho for _ in range(lineas_limpias)] + nuevo_grid
+            self.tetris_contar('LINES_CLEARED', lineas_limpias)            
             for _ in range(lineas_limpias): self.ejecutar_evento('ON_LINE_CLEAR')
     
+        # --- POWER-UPS (Hielo) ---
+    def tetris_contar(self, tipo, n=1):
+        for nombre in self.contadores:
+            self.contadores[nombre][tipo] += n
+
+    def tetris_spawn_powerup(self):
+        for nombre, pu in self.powerups.items():
+            conds = pu.get('condiciones', [])
+            if not conds:
+                continue
+            listo = True
+            for tipo, n in conds:
+                if self.contadores[nombre].get(tipo, 0) < n:
+                    listo = False
+            if listo:
+                self.pieza_actual = pu['estados']
+                self.pieza_color = pu.get('color', '#ADD8E6')
+                self.pieza_powerup = nombre
+                for k in self.contadores[nombre]:
+                    self.contadores[nombre][k] = 0
+                self.pieza_x, self.pieza_y, self.pieza_rotacion = self.ancho / 2 - 2, 0, 0
+                if self.tetris_verificar_colision(self.pieza_x, self.pieza_y, self.pieza_rotacion):
+                    self.juego_terminado = True
+                return True
+        return False
+
+    def tetris_preparar_normal(self):
+        self.pieza_color = '#00FFFF'
+        self.pieza_powerup = None
+        if self.piezas_lentas > 0:
+            self.velocidad_gravedad = self.velocidad_base * self.slow_div
+            self.piezas_lentas -= 1
+        else:
+            self.velocidad_gravedad = self.velocidad_base
+        self.tetris_contar('PIECES_SPAWNED')
+
+    def tetris_aplicar_efecto(self):
+        if self.pieza_powerup:
+            pu = self.powerups[self.pieza_powerup]
+            if pu.get('efecto') == 'SLOW_DOWN':
+                self.piezas_lentas = pu['params'].get('DURATION', 5)
+                self.slow_div = pu['params'].get('SLOW_DIV', 2)
+            self.pieza_powerup = None
+
     def snake_spawn_jugador(self, accion):
         coords = accion['params'][0] if accion['params'] else [self.ancho / 2, self.alto / 2]
         self.serpiente_cuerpo = [(coords[0], coords[1])]
@@ -294,15 +352,14 @@ class Juego:
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print "Uso: python runtime.py <archivo_juego.json>"
+        print("Uso: python runtime.py <archivo_juego.json>")
         sys.exit(1)
     archivo_juego = sys.argv[1]
     try:
         with open(archivo_juego, 'r') as f:
             datos_juego = json.load(f)
     except IOError:
-        print "Error: No se pudo encontrar el archivo " + archivo_juego
+        print("Error: No se pudo encontrar el archivo ") + archivo_juego
         sys.exit(1)
     juego = Juego(datos_juego)
     juego.run()
-    
