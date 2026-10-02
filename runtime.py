@@ -55,7 +55,17 @@ class Juego:
             self.pieza_actual = None
             self.pieza_x, self.pieza_y, self.pieza_rotacion = 0, 0, 0
             self.velocidad_gravedad = 0.4
-        
+            self.velocidad_base = 0.4
+            self.velocidad_gravedad = self.velocidad_base
+            self.pieza_color = '#00FFFF'
+            self.pieza_powerup = None
+            self.piezas_lentas = 0
+            self.slow_div = 2
+            self.powerups = self.datos_juego.get('powerups', {})
+            self.contadores = {}
+        for nombre in self.powerups:
+            self.contadores[nombre] = {'LINES_CLEARED': 0, 'PIECES_SPAWNED': 0, 'ROTATIONS': 0}
+
         if self.tipo_juego == 'SNAKE':
             self.serpiente_cuerpo = []
             self.serpiente_direccion = (1, 0)
@@ -294,15 +304,14 @@ class Juego:
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print "Uso: python runtime.py <archivo_juego.json>"
+        print("Uso: python runtime.py <archivo_juego.json>")
         sys.exit(1)
     archivo_juego = sys.argv[1]
     try:
         with open(archivo_juego, 'r') as f:
             datos_juego = json.load(f)
     except IOError:
-        print "Error: No se pudo encontrar el archivo " + archivo_juego
+        print("Error: No se pudo encontrar el archivo ") + archivo_juego
         sys.exit(1)
     juego = Juego(datos_juego)
     juego.run()
-    
