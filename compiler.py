@@ -2,13 +2,20 @@
 # Compilador universal para BrickScript (Version Final y Depurada)
 # Uso: python compiler.py <archivo_entrada.brick>
 
+# CAMBIOS ACTIVIDAD 3 (Tetris remake): soporte de atributo COLOR en DEFINE SHAPE.
+
 import sys
 import re
 import json
 
+# --- NUEVO: color hexadecimal (#RGB o #RRGGBB) y color por defecto ---
+PATRON_COLOR = r'#(?:[0-9A-Fa-f]{6}|[0-9A-Fa-f]{3})\b'
+COLOR_POR_DEFECTO = '#00FFFF'
+
 def lexer(codigo_fuente):
-    codigo_fuente = re.sub(r'#(?![0-9A-Fa-f]{6}\b).*', '', codigo_fuente)
-    token_regex = r'#[0-9A-Fa-f]{6}\b|\b[A-Z_]+\b|\d+|[\[\](),:]'
+   # Un '#' seguido de un color valido NO es comentario; cualquier otro '#' si lo es. 
+    codigo_fuente = re.sub(r'#(?![0-9A-Fa-f]{6}|[0-9A-Fa-f]{3})\b).*', '', codigo_fuente)
+    token_regex = PATRON_COLOR + r'#[0-9A-Fa-f]{6}\b|\b[A-Z_]+\b|\d+|[\[\](),:]'
     tokens = re.findall(token_regex, codigo_fuente)
     return tokens
 
@@ -16,7 +23,9 @@ class Parser:
     def __init__(self, tokens):
         self.tokens = tokens
         self.posicion = 0
-        self.ast = {"tipo_juego": None, "config": {}, "shapes": {}, "events": {}, "powerups": {}}
+        # NUEVO: "colors" guarda el color de cada shape (retrocompatible: "shapes" no cambia)
+        # NUEVO: "powerups" guarda el powerup en el shape
+        self.ast = {"tipo_juego": None, "config": {}, "shapes": {}, "colors": {}, "events": {}, "powerups": {}}
 
     def parse(self):
         while self.posicion < len(self.tokens):
@@ -101,6 +110,14 @@ class Parser:
         self.consumir('SHAPE')
         nombre_shape = self.consumir()
         self.consumir(':')
+        # --- NUEVO: atributo opcional COLOR: #RRGGBB ---
+        color = COLOR_POR_DEFECTO
+        if self.posicion < len(self.tokens) and self.tokens[self.posicion] == 'COLOR':
+            self.consumir('COLOR')
+            self.consumir(':')
+            color = self.consumir()
+            if color is None or not re.match('^' + PATRON_COLOR + '$', color):
+                raise Exception("Error de sintaxis: Se esperaba un color hexadecimal (#RRGGBB) en la figura '" + nombre_shape + "' pero se encontro '" + str(color) + "'")
         estados = []
         while self.posicion < len(self.tokens) and self.tokens[self.posicion] == 'STATE':
             self.consumir('STATE')
@@ -118,6 +135,7 @@ class Parser:
             estados.append(matriz)
         self.consumir('END')
         self.ast['shapes'][nombre_shape] = estados
+        self.ast['colors'][nombre_shape] = color
 
     # --- FUNCION CORREGIDA ---
     def parsear_evento(self):
