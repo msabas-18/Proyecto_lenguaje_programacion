@@ -1,11 +1,10 @@
 # tetris.brick
-GAME_TYPE TETRIS    # Tipo de juego
+GAME_TYPE TETRIS
 
 GAME_GRID (10, 20)
 
 # --- Definicion de las Piezas ---
 DEFINE SHAPE I_PIECE:
-  COLOR: #d21cbd
   STATE 1:
     [0, 1, 0, 0]
     [0, 1, 0, 0]
@@ -19,7 +18,6 @@ DEFINE SHAPE I_PIECE:
 END
 
 DEFINE SHAPE L_PIECE:
-  COLOR: #e4622e
   STATE 1:
     [0, 1, 0]
     [0, 1, 0]
@@ -39,7 +37,6 @@ DEFINE SHAPE L_PIECE:
 END
 
 DEFINE SHAPE T_PIECE:
-  COLOR: #a8d914
   STATE 1:
     [0, 1, 0]
     [1, 1, 1]
@@ -55,67 +52,6 @@ DEFINE SHAPE T_PIECE:
   STATE 4:
     [0, 1, 0]
     [1, 1, 0]
-    [0, 1, 0]
-END
-
-# --- Figuras nuevas (cada una con su COLOR) ---
-DEFINE SHAPE Z_PIECE:
-  COLOR: #00CC44
-  STATE 1:
-    [1, 1, 0]
-    [0, 1, 1]
-    [0, 0, 0]
-  STATE 2:
-    [0, 0, 1]
-    [0, 1, 1]
-    [0, 1, 0]
-  STATE 3:
-    [0, 0, 0]
-    [1, 1, 0]
-    [0, 1, 1]
-  STATE 4:
-    [0, 1, 0]
-    [1, 1, 0]
-    [1, 0, 0]
-END
-
-DEFINE SHAPE V_PIECE:
-  COLOR: #FF8C00
-  STATE 1:
-    [0, 1, 0]
-    [1, 1, 0]
-    [0, 0, 0]
-  STATE 2:
-    [0, 1, 0]
-    [0, 1, 1]
-    [0, 0, 0]
-  STATE 3:
-    [0, 0, 0]
-    [0, 1, 1]
-    [0, 1, 0]
-  STATE 4:
-    [0, 0, 0]
-    [1, 1, 0]
-    [0, 1, 0]
-END
-
-DEFINE SHAPE PLUS_PIECE:
-  COLOR: #FF3333
-  STATE 1:
-    [0, 1, 0]
-    [1, 1, 1]
-    [0, 1, 0]
-  STATE 2:
-    [0, 1, 0]
-    [1, 1, 1]
-    [0, 1, 0]
-  STATE 3:
-    [0, 1, 0]
-    [1, 1, 1]
-    [0, 1, 0]
-  STATE 4:
-    [0, 1, 0]
-    [1, 1, 1]
     [0, 1, 0]
 END
 
