@@ -20,23 +20,23 @@ DEFINE SHAPE I_PIECE:
 END
 
 DEFINE SHAPE L_PIECE:
-  COLOR: #e4622e
+  COLOR: #0000FF
   STATE 1:
     [0, 1, 0]
     [0, 1, 0]
     [0, 1, 1]
   STATE 2:
-    [0, 1, 0]
-    [0, 1, 0]
-    [1, 1, 0]
-  STATE 3:
-    [0, 0, 1]
-    [1, 1, 1]
-    [0, 0, 0]
-  STATE 4:
     [0, 0, 0]
     [1, 1, 1]
     [1, 0, 0]
+  STATE 3:
+    [1, 1, 0]
+    [0, 1, 0]
+    [0, 1, 0]
+  STATE 4:
+    [0, 0, 1]
+    [1, 1, 1]
+    [0, 0, 0]
 END
 
 DEFINE SHAPE T_PIECE:
@@ -118,6 +118,22 @@ DEFINE SHAPE PLUS_PIECE:
     [0, 1, 0]
     [1, 1, 1]
     [0, 1, 0]
+END
+
+DEFINE SHAPE SQUARE_PIECE:
+  COLOR: #E6E6FA
+  STATE 1:
+    [1, 1]
+    [1, 1]
+  STATE 2:
+    [1, 1]
+    [1, 1]
+  STATE 3:
+    [1, 1]
+    [1, 1]
+  STATE 4:
+    [1, 1]
+    [1, 1]
 END
 
 # --- Logica y Reglas ---
