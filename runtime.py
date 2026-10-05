@@ -70,8 +70,8 @@ class Juego:
             self.slow_div = 2
             self.powerups = self.datos_juego.get('powerups', {})
             self.contadores = {}
-        for nombre in self.powerups:
-            self.contadores[nombre] = {'LINES_CLEARED': 0, 'PIECES_SPAWNED': 0, 'ROTATIONS': 0}
+            for nombre in self.powerups:
+                self.contadores[nombre] = {'LINES_CLEARED': 0, 'PIECES_SPAWNED': 0, 'ROTATIONS': 0}
 
         if self.tipo_juego == 'SNAKE':
             self.serpiente_cuerpo = []
