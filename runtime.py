@@ -203,7 +203,7 @@ class Juego:
 
     # METODOS DE LOGICA DE JUEGO (MANTENIDOS DEL ARCHIVO ORIGINAL)
     # ---------------------------------------------------------------------
-
+    """ TETRIS """
     def tetris_spawn_pieza(self):
         if self.tetris_spawn_powerup():
             return
@@ -265,6 +265,8 @@ class Juego:
             self.grid = [[0] * self.ancho for _ in range(lineas_limpias)] + nuevo_grid
             self.tetris_contar('LINES_CLEARED', lineas_limpias)            
             for _ in range(lineas_limpias): self.ejecutar_evento('ON_LINE_CLEAR')
+            
+    """SNAKE"""
     
         # --- POWER-UPS (Hielo) ---
     def tetris_contar(self, tipo, n=1):
