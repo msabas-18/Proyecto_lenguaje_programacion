@@ -208,13 +208,31 @@ class Juego:
         if self.tetris_spawn_powerup():
             return
         self.tetris_preparar_normal()
-        nombre_pieza = random.choice(self.datos_juego['shapes'].keys())
+        nombre_pieza = self.elegir_shape_ponderado()
         self.pieza_actual = self.datos_juego['shapes'][nombre_pieza]
         # NUEVO: leer el color de la pieza desde el JSON (con valor por defecto si no existe)
         self.pieza_color = self.datos_juego.get('colors', {}).get(nombre_pieza, COLOR_PIEZA_DEFECTO)
         self.pieza_x, self.pieza_y, self.pieza_rotacion = self.ancho / 2 - 2, 0, 0
         if self.tetris_verificar_colision(self.pieza_x, self.pieza_y, self.pieza_rotacion):
             self.juego_terminado = True
+
+    def elegir_shape_ponderado(self):
+        # Seleccion ponderada: cada shape tiene un peso entero (WEIGHT en el .brick).
+        # Si el JSON no trae "weights" (juegos viejos) todos pesan 1 = eleccion uniforme.
+        nombres = sorted(self.datos_juego['shapes'].keys())
+        pesos = self.datos_juego.get('weights', {})
+        total = 0
+        for nombre in nombres:
+            total += pesos.get(nombre, 1)
+        if total <= 0:
+            return random.choice(nombres)
+        r = random.randint(1, total)
+        acumulado = 0
+        for nombre in nombres:
+            acumulado += pesos.get(nombre, 1)
+            if r <= acumulado:
+                return nombre
+        return nombres[-1]
 
     def tetris_mover_pieza(self, direccion):
         if not self.pieza_actual: return

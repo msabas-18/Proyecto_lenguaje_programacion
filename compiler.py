@@ -3,8 +3,8 @@
 # Uso: python compiler.py <archivo_entrada.brick>
 #
 # CAMBIOS ACTIVIDAD 3 (Tetris remake): soporte de atributo COLOR en DEFINE SHAPE.
-
-# CAMBIOS ACTIVIDAD 3 (Tetris remake): soporte de atributo COLOR en DEFINE SHAPE.
+# CAMBIOS SELECCION PONDERADA: soporte de atributo WEIGHT (entero >= 0) en DEFINE SHAPE.
+#   WEIGHT es opcional (por defecto 1), asi los .brick antiguos siguen funcionando.
 
 import sys
 import re
@@ -13,6 +13,8 @@ import json
 # --- NUEVO: color hexadecimal (#RGB o #RRGGBB) y color por defecto ---
 PATRON_COLOR = r'#(?:[0-9A-Fa-f]{6}|[0-9A-Fa-f]{3})\b'
 COLOR_POR_DEFECTO = '#00FFFF'
+# --- NUEVO: peso por defecto de una figura en la seleccion ponderada ---
+PESO_POR_DEFECTO = 1
 
 def lexer(codigo_fuente):
     # Un '#' seguido de un color valido NO es comentario; cualquier otro '#' si lo es.
@@ -27,7 +29,8 @@ class Parser:
         self.tokens = tokens
         self.posicion = 0
         # "colors" guarda el color de cada shape (retrocompatible: "shapes" no cambia)
-        self.ast = {"tipo_juego": None, "config": {}, "shapes": {}, "colors": {}, "events": {}, "powerups": {}}
+        # "weights" guarda el peso de cada shape para la seleccion ponderada
+        self.ast = {"tipo_juego": None, "config": {}, "shapes": {}, "colors": {}, "weights": {}, "events": {}, "powerups": {}}
 
     def parse(self):
         while self.posicion < len(self.tokens):
@@ -45,7 +48,14 @@ class Parser:
                 self.parsear_evento()
             else:
                 self.posicion += 1
+        self.validar_pesos()
         return self.ast
+
+    def validar_pesos(self):
+        # Si hay figuras, al menos una debe tener peso > 0; si no, nunca saldria ninguna.
+        pesos = self.ast['weights']
+        if pesos and sum(pesos.values()) <= 0:
+            raise Exception("Error semantico: todas las figuras tienen WEIGHT 0; al menos una debe tener un peso mayor que 0")
 
     def consumir(self, token_esperado=None):
         if self.posicion < len(self.tokens):
@@ -76,14 +86,21 @@ class Parser:
         self.consumir('SHAPE')
         nombre_shape = self.consumir()
         self.consumir(':')
-        # Atributo opcional COLOR: #RRGGBB
+        # Atributos opcionales
         color = COLOR_POR_DEFECTO
-        if self.posicion < len(self.tokens) and self.tokens[self.posicion] == 'COLOR':
-            self.consumir('COLOR')
+        peso = PESO_POR_DEFECTO
+        while self.posicion < len(self.tokens) and self.tokens[self.posicion] in ('COLOR', 'WEIGHT'):
+            clave = self.consumir()
             self.consumir(':')
-            color = self.consumir()
-            if color is None or not re.match('^' + PATRON_COLOR + '$', color):
-                raise Exception("Error de sintaxis: Se esperaba un color hexadecimal (#RRGGBB) en la figura '" + nombre_shape + "' pero se encontro '" + str(color) + "'")
+            valor = self.consumir()
+            if clave == 'COLOR':
+                if valor is None or not re.match('^' + PATRON_COLOR + '$', valor):
+                    raise Exception("Error de sintaxis: Se esperaba un color hexadecimal (#RRGGBB) en la figura '" + nombre_shape + "' pero se encontro '" + str(valor) + "'")
+                color = valor
+            else:
+                if valor is None or not re.match(r'^\d+$', valor):
+                    raise Exception("Error de sintaxis: Se esperaba un entero >= 0 como WEIGHT en la figura '" + nombre_shape + "' pero se encontro '" + str(valor) + "'")
+                peso = int(valor)
         estados = []
         while self.posicion < len(self.tokens) and self.tokens[self.posicion] == 'STATE':
             self.consumir('STATE')
@@ -103,6 +120,7 @@ class Parser:
         self.consumir('END')
         self.ast['shapes'][nombre_shape] = estados
         self.ast['colors'][nombre_shape] = color
+        self.ast['weights'][nombre_shape] = peso
 
     def parsear_powerup(self):
         self.consumir('DEFINE')

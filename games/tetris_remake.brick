@@ -7,6 +7,7 @@ GAME_GRID (10, 20)
 # --- Definicion de las Piezas ---
 DEFINE SHAPE I_PIECE:
   COLOR: #d21cbd
+  WEIGHT: 3
   STATE 1:
     [0, 1, 0, 0]
     [0, 1, 0, 0]
@@ -21,6 +22,7 @@ END
 
 DEFINE SHAPE L_PIECE:
   COLOR: #0000FF
+  WEIGHT: 3
   STATE 1:
     [0, 1, 0]
     [0, 1, 0]
@@ -41,6 +43,7 @@ END
 
 DEFINE SHAPE T_PIECE:
   COLOR: #a8d914
+  WEIGHT: 3
   STATE 1:
     [0, 1, 0]
     [1, 1, 1]
@@ -62,6 +65,7 @@ END
 # --- Figuras nuevas (cada una con su COLOR) ---
 DEFINE SHAPE Z_PIECE:
   COLOR: #00CC44
+  WEIGHT: 2
   STATE 1:
     [1, 1, 0]
     [0, 1, 1]
@@ -82,6 +86,7 @@ END
 
 DEFINE SHAPE V_PIECE:
   COLOR: #FF8C00
+  WEIGHT: 1
   STATE 1:
     [0, 1, 0]
     [1, 1, 0]
@@ -102,6 +107,7 @@ END
 
 DEFINE SHAPE PLUS_PIECE:
   COLOR: #FF3333
+  WEIGHT: 1
   STATE 1:
     [0, 1, 0]
     [1, 1, 1]
@@ -122,6 +128,7 @@ END
 
 DEFINE SHAPE SQUARE_PIECE:
   COLOR: #E6E6FA
+  WEIGHT: 2
   STATE 1:
     [1, 1]
     [1, 1]
@@ -134,11 +141,6 @@ DEFINE SHAPE SQUARE_PIECE:
   STATE 4:
     [1, 1]
     [1, 1]
-END
-
-# --- Logica y Reglas ---
-ON START:
-  SPAWN RANDOM_SHAPE
 END
 
 # --- Power-Ups ---
