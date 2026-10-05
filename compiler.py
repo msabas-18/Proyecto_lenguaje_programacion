@@ -10,18 +10,10 @@ import sys
 import re
 import json
 
-<<<<<<< HEAD
-# Color hexadecimal (#RGB o #RRGGBB) y color por defecto
-PATRON_COLOR = r'#(?:[0-9A-Fa-f]{6}|[0-9A-Fa-f]{3})\b'
-COLOR_POR_DEFECTO = '#00FFFF'
-
-
-=======
 # --- NUEVO: color hexadecimal (#RGB o #RRGGBB) y color por defecto ---
 PATRON_COLOR = r'#(?:[0-9A-Fa-f]{6}|[0-9A-Fa-f]{3})\b'
 COLOR_POR_DEFECTO = '#00FFFF'
 
->>>>>>> Juanfer
 def lexer(codigo_fuente):
     # Un '#' seguido de un color valido NO es comentario; cualquier otro '#' si lo es.
     codigo_fuente = re.sub(r'#(?!(?:[0-9A-Fa-f]{6}|[0-9A-Fa-f]{3})\b).*', '', codigo_fuente)
@@ -34,13 +26,8 @@ class Parser:
     def __init__(self, tokens):
         self.tokens = tokens
         self.posicion = 0
-<<<<<<< HEAD
         # "colors" guarda el color de cada shape (retrocompatible: "shapes" no cambia)
         self.ast = {"tipo_juego": None, "config": {}, "shapes": {}, "colors": {}, "events": {}, "powerups": {}}
-=======
-        # NUEVO: "colors" guarda el color de cada shape (retrocompatible: "shapes" no cambia)
-        self.ast = {"tipo_juego": None, "config": {}, "shapes": {}, "colors": {}, "events": {}}
->>>>>>> Juanfer
 
     def parse(self):
         while self.posicion < len(self.tokens):
@@ -89,11 +76,7 @@ class Parser:
         self.consumir('SHAPE')
         nombre_shape = self.consumir()
         self.consumir(':')
-<<<<<<< HEAD
         # Atributo opcional COLOR: #RRGGBB
-=======
-        # --- NUEVO: atributo opcional COLOR: #RRGGBB ---
->>>>>>> Juanfer
         color = COLOR_POR_DEFECTO
         if self.posicion < len(self.tokens) and self.tokens[self.posicion] == 'COLOR':
             self.consumir('COLOR')
@@ -120,7 +103,6 @@ class Parser:
         self.consumir('END')
         self.ast['shapes'][nombre_shape] = estados
         self.ast['colors'][nombre_shape] = color
-<<<<<<< HEAD
 
     def parsear_powerup(self):
         self.consumir('DEFINE')
@@ -159,8 +141,6 @@ class Parser:
         if not pu['estados']:
             raise Exception("Error: el POWERUP " + nombre + " no tiene ningun STATE")
         self.ast['powerups'][nombre] = pu
-=======
->>>>>>> Juanfer
 
     def parsear_evento(self):
         self.consumir('ON')
