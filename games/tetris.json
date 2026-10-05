@@ -406,18 +406,12 @@
     ]
   }, 
   "colors": {
-<<<<<<< HEAD
-    "T_PIECE": "#00FFFF", 
-    "L_PIECE": "#00FFFF", 
-    "I_PIECE": "#00FFFF"
-=======
     "Z_PIECE": "#00CC44", 
     "V_PIECE": "#FF8C00", 
     "L_PIECE": "#e4622e", 
     "PLUS_PIECE": "#FF3333", 
     "T_PIECE": "#a8d914", 
     "I_PIECE": "#d21cbd"
->>>>>>> Juanfer
   }, 
   "tipo_juego": "TETRIS", 
   "powerups": {}, 
