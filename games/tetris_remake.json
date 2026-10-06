@@ -457,6 +457,15 @@
     "I_PIECE": "#d21cbd"
   }, 
   "tipo_juego": "TETRIS", 
+  "weights": {
+    "SQUARE_PIECE": 2, 
+    "Z_PIECE": 2, 
+    "V_PIECE": 1, 
+    "L_PIECE": 3, 
+    "PLUS_PIECE": 1, 
+    "T_PIECE": 3, 
+    "I_PIECE": 3
+  }, 
   "powerups": {
     "ICE_BLOCK": {
       "color": "#ADD8E6", 

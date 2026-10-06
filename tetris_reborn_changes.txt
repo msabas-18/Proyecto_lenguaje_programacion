@@ -1,0 +1,148 @@
+=============================================================
+  TETRIS REBORN - DOCUMENTO DE CAMBIOS (Actividad 3)
+  Proyecto BrickScript - TLP 2026-2S
+=============================================================
+
+Equipo: 22
+Entorno: Python 2.7 + Tkinter (solo libreria estandar, sin numpy)
+
+Este documento describe que se agrego o modifico en cada archivo
+respecto al proyecto base (RetroBrik Windows Version), y por que.
+
+RESUMEN DE FUNCIONES NUEVAS
+---------------------------
+1. Figuras nuevas: Z_PIECE, V_PIECE, PLUS_PIECE y SQUARE_PIECE.
+2. Color por figura: atributo COLOR: #RRGGBB en DEFINE SHAPE.
+3. Probabilidad de aparicion ponderada: atributo WEIGHT en DEFINE SHAPE
+   (peso entero; por defecto 1).
+4. Power-Ups: nuevo bloque DEFINE POWERUP (ejemplo: ICE_BLOCK, que
+   aparece tras limpiar 2 lineas y ralentiza la caida).
+5. Retrocompatibilidad: tetris.brick y snake.brick originales se
+   compilan y juegan sin ningun cambio.
+
+
+-------------------------------------------------------------
+1. games/tetris_remake.brick  (archivo NUEVO, parte de tetris.brick)
+-------------------------------------------------------------
+- Cada DEFINE SHAPE incluye ahora COLOR: #RRGGBB y WEIGHT: n
+  (I=3, L=3, T=3, Z=2, SQUARE=2, V=1, PLUS=1).
+- Figuras nuevas definidas con sus estados de rotacion:
+    Z_PIECE      (COLOR #00CC44, 4 estados)
+    V_PIECE      (COLOR #FF8C00, 4 estados)
+    PLUS_PIECE   (COLOR #FF3333, 4 estados)
+    SQUARE_PIECE (COLOR #E6E6FA, 4 estados)
+- L_PIECE y T_PIECE con sus 4 estados de rotacion.
+- Nuevo bloque (seccion "Power-Ups"):
+    DEFINE POWERUP ICE_BLOCK:
+      COLOR: #ADD8E6
+      EFFECT: SLOW_DOWN
+      SLOW_DIV: 2
+      DURATION: 5
+      WHEN: LINES_CLEARED 2
+      STATE 1: (forma de cruz 3x3)
+    END
+- Los eventos (START, TICK, LINE_CLEAR, teclas) se mantienen igual que
+  en tetris.brick.
+
+
+-------------------------------------------------------------
+2. gramaticas bnf/tetris_remake.bnf  (archivo NUEVO, parte de tetris.bnf)
+-------------------------------------------------------------
+Lineas agregadas / modificadas:
+- <definiciones> ahora admite <definicion> (shape o powerup).
+- <definicion> ::= <definicion_shape> | <definicion_powerup>
+- <definicion_shape> incluye <atributos_shape> antes de <estados>.
+- <atributos_shape>, <atributo_shape>, <atributo_weight> :
+  COLOR y WEIGHT son opcionales y van en cualquier orden.
+- <atributo_color> ::= "COLOR" ":" <color_hex>
+- <color_hex> y <hex> para colores #RRGGBB.
+- Reglas de POWERUP: <definicion_powerup>, <items_powerup>,
+  <item_powerup>, <atributo_efecto>, <atributo_when>, <atributo_param>,
+  <efecto>, <tipo_condicion>, <nombre_param>.
+- Comentario en <accion_spawn>: la eleccion de RANDOM_SHAPE es ponderada.
+
+
+-------------------------------------------------------------
+3. compiler.py
+-------------------------------------------------------------
+Lineas agregadas / modificadas (numeros segun la version entregada):
+
+L14-15   PATRON_COLOR y COLOR_POR_DEFECTO ('#00FFFF'): reconocen
+         colores #RGB y #RRGGBB; el color por defecto mantiene
+         compatibilidad con .brick sin COLOR.
+L17      PESO_POR_DEFECTO = 1: peso por defecto de una figura.
+L19-24   lexer(): el regex que elimina comentarios ya no borra un '#'
+         seguido de un color valido; token_regex incluye el patron de
+         color como un solo token.
+L33      self.ast incorpora las claves "colors", "weights" y
+         "powerups" (las claves originales no cambian).
+L35-52   parse(): el bloque DEFINE decide entre parsear_powerup() y
+         parsear_shape(); al final llama a validar_pesos().
+L54-58   validar_pesos(): error semantico si todas las figuras tienen
+         WEIGHT 0.
+L84-123  parsear_shape(): acepta los atributos opcionales COLOR y
+         WEIGHT en cualquier orden, valida el formato (color
+         hexadecimal / entero >= 0) y guarda el color en
+         ast["colors"] y el peso en ast["weights"].
+L125-161 parsear_powerup() (metodo NUEVO): lee COLOR, EFFECT, WHEN,
+         parametros numericos (SLOW_DIV, DURATION) y los STATE; guarda
+         el resultado en ast["powerups"]. Error si no hay STATE.
+
+Retrocompatibilidad: si el .brick no trae COLOR/WEIGHT/POWERUP, se
+asignan valores por defecto y el .json resultante sigue siendo valido.
+
+
+-------------------------------------------------------------
+4. runtime.py
+-------------------------------------------------------------
+Lineas agregadas / modificadas (numeros segun la version entregada):
+
+L20      COLOR_PIEZA_DEFECTO = '#00FFFF': el color ya no esta fijo en
+         el codigo; es solo el valor de respaldo.
+L63-74   __init__ (Tetris): nuevos atributos pieza_color,
+         velocidad_base, pieza_powerup, piezas_lentas, slow_div,
+         powerups (leidos del JSON con .get) y contadores por power-up
+         (LINES_CLEARED, PIECES_SPAWNED, ROTATIONS).
+L140-155 dibujar(): se elimina COLOR_PIEZA fijo; cada celda fijada del
+         tablero se dibuja con su propio color (si el valor es un
+         string '#RRGGBB'; si es 1, gris como antes -> compatible).
+L163     La pieza activa se dibuja con self.pieza_color.
+L207-217 tetris_spawn_pieza(): primero intenta aparecer un power-up,
+         luego elige la figura con elegir_shape_ponderado() en vez de
+         random.choice, y lee el color de la figura desde
+         datos_juego['colors'] (con valor por defecto).
+L219-232 elegir_shape_ponderado() (metodo NUEVO): seleccion ponderada
+         con random.randint y suma acumulada (sin numpy). Si el JSON
+         no trae "weights", todas pesan 1 (eleccion uniforme).
+L256     tetris_fijar_pieza() llama a tetris_aplicar_efecto().
+L263     La celda fijada guarda el color de la pieza (antes guardaba 1).
+L284     tetris_limpiar_lineas() llama a tetris_contar('LINES_CLEARED').
+L290-292 tetris_contar(): incrementa los contadores de condiciones.
+L294-313 tetris_spawn_powerup(): si se cumplen todas las condiciones
+         WHEN de un power-up, aparece su forma con su color y se
+         reinician sus contadores.
+L315-323 tetris_preparar_normal(): restablece color/estado y aplica la
+         ralentizacion mientras queden piezas_lentas.
+L325-331 tetris_aplicar_efecto(): aplica EFFECT SLOW_DOWN (DURATION
+         piezas a velocidad / SLOW_DIV).
+
+Retrocompatibilidad: un .json antiguo (sin "colors", "weights" ni
+"powerups") funciona: color por defecto, eleccion uniforme y sin
+power-ups.
+
+
+-------------------------------------------------------------
+5. Otros archivos
+-------------------------------------------------------------
+- jugar.bat: se agrego la linea de ejemplo "jugar tetris_remake" en
+  el mensaje de uso (1 linea).
+- tetris.brick, snake.brick, tetris.bnf, snake.bnf: SIN cambios.
+
+
+-------------------------------------------------------------
+6. Aporte de cada integrante
+-------------------------------------------------------------
+Laura: Modificaciones de compiler.py (COLOR, WEIGHT, POWERUP)
+Juan Fernando: ej. Modificaciones de runtime.py (colores, ponderacion)
+Maickel Sabas: ej. tetris_remake.brick y tetris_remake.bnf
+Geremy Sierra: ej. Pruebas de retrocompatibilidad, power-up y video

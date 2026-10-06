@@ -195,7 +195,18 @@
       ]
     ]
   }, 
+  "colors": {
+    "T_PIECE": "#00FFFF", 
+    "L_PIECE": "#00FFFF", 
+    "I_PIECE": "#00FFFF"
+  }, 
   "tipo_juego": "TETRIS", 
+  "weights": {
+    "T_PIECE": 1, 
+    "L_PIECE": 1, 
+    "I_PIECE": 1
+  }, 
+  "powerups": {}, 
   "config": {
     "grid_size": [
       10, 
