@@ -8,7 +8,14 @@
       ]
     ]
   }, 
+  "colors": {
+    "PIXEL": "#00FFFF"
+  }, 
   "tipo_juego": "SNAKE", 
+  "weights": {
+    "PIXEL": 1
+  }, 
+  "powerups": {}, 
   "config": {
     "grid_size": [
       18, 
