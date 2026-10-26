@@ -1,4 +1,18 @@
 {
+  "default_level": "BABY", 
+  "level_order": [
+    "BABY"
+  ], 
+  "levels": {
+    "BABY": {
+      "head": "NORMAL", 
+      "clouds": false, 
+      "shield": false, 
+      "tick": 150, 
+      "tail": "NORMAL", 
+      "poison": "OFF"
+    }
+  }, 
   "shapes": {
     "PIXEL": [
       [
