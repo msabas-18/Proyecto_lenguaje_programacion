@@ -7,7 +7,13 @@
 
 <definicion> ::= <definicion_shape> | <definicion_powerup>
 
-<definicion_shape> ::= "DEFINE" "SHAPE" <identificador> ":" <estados> "END"
+# Los atributos COLOR y WEIGHT son opcionales y pueden ir en cualquier orden.
+# WEIGHT define la probabilidad relativa de la figura en SPAWN RANDOM_SHAPE
+# (seleccion ponderada). Si se omite vale 1. Debe haber al menos una figura con WEIGHT > 0.
+<definicion_shape> ::= "DEFINE" "SHAPE" <identificador> ":" <atributos_shape> <estados> "END"
+<atributos_shape>  ::= "" | <atributo_shape> <atributos_shape>
+<atributo_shape>   ::= <atributo_color> | <atributo_weight>
+<atributo_weight>  ::= "WEIGHT" ":" <numero>
 <estados>          ::= <estado> | <estado> <estados>
 <estado>           ::= "STATE" <numero> ":" <matriz>
 <matriz>           ::= <fila> | <fila> <matriz>
@@ -37,7 +43,7 @@
 <acciones_tetris>    ::= <accion_tetris> | <accion_tetris> <acciones_tetris>
 
 <accion_tetris> ::= <accion_spawn> | <accion_mover> | <accion_rotar> | <accion_puntos>
-<accion_spawn>  ::= "SPAWN" "RANDOM_SHAPE"
+<accion_spawn>  ::= "SPAWN" "RANDOM_SHAPE"   # eleccion ponderada segun WEIGHT de cada figura
 <accion_mover>  ::= "MOVE" "CURRENT_PIECE" <direccion>
 <accion_rotar>  ::= "ROTATE" "CURRENT_PIECE"
 <accion_puntos> ::= "INCREASE_SCORE" <numero>
