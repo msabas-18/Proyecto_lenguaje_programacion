@@ -2,7 +2,8 @@
 
 <tipo_juego> ::= "GAME_TYPE" "SNAKE"
 <grid>       ::= "GAME_GRID" "(" <numero> "," <numero> ")"
-<definiciones> ::= <definicion_shape> | <definicion_shape> <definiciones>
+<definiciones> ::= <definicion> | <definicion> <definiciones>
+<definicion>   ::= <definicion_shape> | <definicion_especial> | <definicion_levels>
 <eventos>    ::= <evento> | <evento> <eventos>
 
 <definicion_shape> ::= "DEFINE" "SHAPE" <identificador> ":" <estados> "END"
@@ -11,6 +12,78 @@
 <matriz>           ::= <fila> | <fila> <matriz>
 <fila>             ::= "[" <valores_fila> "]"
 <valores_fila>     ::= <numero> | <numero> "," <valores_fila>
+
+# ===================== ACTIVIDAD 4 (Snake Evolved) =====================
+# Todo lo nuevo es OPCIONAL: un .brick sin estas reglas (el snake.brick original)
+# sigue siendo valido y se ejecuta como nivel BABY.
+# Los bloques especiales NO llevan STATE; solo se permiten con GAME_TYPE SNAKE.
+
+# --- Figuras especiales (cada una admite solo sus propios atributos) ---
+<definicion_especial> ::= <def_snake_body> | <def_poison_fruit> | <def_cloud> | <def_shield_fruit>
+
+<def_snake_body>   ::= "DEFINE" "SHAPE" "SNAKE_BODY" ":" <attrs_body> "END"
+<def_poison_fruit> ::= "DEFINE" "SHAPE" "POISON_FRUIT" ":" <attrs_poison> "END"
+<def_cloud>        ::= "DEFINE" "SHAPE" "CLOUD" ":" <attrs_cloud> "END"
+<def_shield_fruit> ::= "DEFINE" "SHAPE" "SHIELD_FRUIT" ":" <attrs_shield_fruit> "END"
+
+<attrs_body>        ::= <attr_body> | <attr_body> <attrs_body>
+<attrs_poison>      ::= <attr_poison> | <attr_poison> <attrs_poison>
+<attrs_cloud>       ::= <attr_cloud> | <attr_cloud> <attrs_cloud>
+<attrs_shield_fruit> ::= <attr_shield_fruit> | <attr_shield_fruit> <attrs_shield_fruit>
+
+<attr_body>         ::= <attr_color> | <attr_form>
+<attr_poison>       ::= <attr_color> | <attr_penalty> | <attr_count>
+<attr_cloud>        ::= <attr_color> | <attr_count>
+<attr_shield_fruit> ::= <attr_color> | <attr_duration>
+
+<attr_color>    ::= "COLOR" ":" <color_hex>
+<attr_form>     ::= "FORM" ":" <forma>
+<attr_penalty>  ::= "PENALTY" ":" <numero>
+<attr_count>    ::= "COUNT" ":" <numero>
+<attr_duration> ::= "DURATION" ":" <numero>
+
+<forma>      ::= "RECTANGLE" | "CIRCULAR" | "TRIANGULAR"
+<color_hex>  ::= "#" <hex> <hex> <hex> <hex> <hex> <hex>
+<hex>        ::= <digito> | "A"..."F" | "a"..."f"
+
+# --- Bloque de niveles ---
+# Un LEVEL termina cuando empieza otro LEVEL o llega el END del bloque.
+# Lo que un LEVEL no escribe queda como en el Snake original
+# (TICK 150, POISON OFF, SHIELD OFF, CLOUDS OFF, HEAD NORMAL, TAIL NORMAL).
+<definicion_levels> ::= "DEFINE" "LEVELS" ":" <items_levels> "END"
+<items_levels>      ::= <item_levels> | <item_levels> <items_levels>
+<item_levels>       ::= <default_level> | <level_up_score> | <nivel>
+
+<default_level>  ::= "DEFAULT_LEVEL" ":" <nombre_nivel>
+<level_up_score> ::= "LEVEL_UP_SCORE" ":" <numero>
+<nivel>          ::= "LEVEL" <nombre_nivel> ":" | "LEVEL" <nombre_nivel> ":" <atributos_nivel>
+<nombre_nivel>   ::= "BABY" | "ENTUSIASTA" | "NYAN_CAT"
+
+<atributos_nivel> ::= <atributo_nivel> | <atributo_nivel> <atributos_nivel>
+<atributo_nivel>  ::= <attr_tick> | <attr_poison_nivel> | <attr_shield_nivel> | <attr_clouds_nivel> | <attr_head> | <attr_tail> | <attr_shield_duration>
+
+<attr_tick>            ::= "TICK" ":" <numero>
+<attr_poison_nivel>    ::= "POISON" ":" <modo_veneno>
+<attr_shield_nivel>    ::= "SHIELD" ":" <on_off>
+<attr_clouds_nivel>    ::= "CLOUDS" ":" <on_off>
+<attr_head>            ::= "HEAD" ":" <cabeza>
+<attr_tail>            ::= "TAIL" ":" <cola>
+<attr_shield_duration> ::= "SHIELD_DURATION" ":" <numero>
+
+<modo_veneno> ::= "OFF" | "SUBTRACT" | "KILL"
+<on_off>      ::= "ON" | "OFF"
+<cabeza>      ::= "NORMAL" | "CAT"
+<cola>        ::= "NORMAL" | "RAINBOW"
+
+# Reglas semanticas que valida compiler.py (con numero de linea en el error):
+#  - TICK, DURATION y SHIELD_DURATION > 0 (enteros; TICK en milisegundos).
+#    TICK que no es multiplo de 25 ms genera una advertencia, no un error.
+#  - PENALTY, COUNT y LEVEL_UP_SCORE >= 0 (LEVEL_UP_SCORE 0 = sin avance automatico).
+#  - Nivel desconocido o repetido, figura repetida o DEFINE LEVELS repetido: error.
+#  - DEFINE LEVELS debe tener al menos un LEVEL, y DEFAULT_LEVEL debe estar definido.
+#  - BABY siempre existe; sin DEFINE LEVELS solo se crea BABY (Snake original).
+#  - Estas figuras y DEFINE LEVELS solo valen con GAME_TYPE SNAKE.
+# =======================================================================
 
 <evento>         ::= "ON" <nombre_evento_snake> ":" <acciones_snake> "END"
 <nombre_evento_snake> ::= "START" | "TICK" | "EAT_FOOD" | "COLLISION_WALL" | "COLLISION_SELF" | "KEY_UP" | "KEY_DOWN" | "KEY_LEFT" | "KEY_RIGHT"
