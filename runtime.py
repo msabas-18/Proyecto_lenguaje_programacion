@@ -7,7 +7,7 @@
 #
 # CAMBIOS ACTIVIDAD 4 (Snake evolved): niveles BABY/ENTUSIASTA/NYAN_CAT, formas CIRCULAR/TRIANGULAR,
 # frutas venenosas, nubes, power-up "No Morir" con temporizador y panel de nivel. Todo el codigo
-# nuevo lleva el comentario "# ACT4". Sin "levels" en el JSON el Snake se comporta como el original.
+# nuevo lleva el comentario "# ACT4:". Sin "levels" en el JSON el Snake se comporta como el original.
 
 import sys
 import json
@@ -24,7 +24,7 @@ import tkMessageBox # Necesario para el GAME OVER
 # NUEVO: color por defecto de una pieza si el .brick no define COLOR
 COLOR_PIEZA_DEFECTO = '#00FFFF'
 
-# ACT4 (Snake evolved): valores por defecto. Si el JSON no trae "levels" el juego usa
+# ACT4: (Snake evolved): valores por defecto. Si el JSON no trae "levels" el juego usa
 # el nivel BABY con estos valores, que reproducen el Snake original.
 SNAKE_NIVEL_DEFECTO = {'tick': 150, 'poison': 'OFF', 'shield': False, 'clouds': False,
                        'head': 'NORMAL', 'tail': 'NORMAL'}
@@ -399,12 +399,21 @@ class Juego:
         self.serpiente_direccion = (1, 0)
         
     def snake_spawn_comida(self):
-        while True:
+        # ACT4: el ciclo "while True" original se limito a 500 intentos al azar (los mismos numeros
+        # aleatorios que antes mientras haya sitio); si no se encuentra celda se elige entre las libres
+        # y, si no queda ninguna, no hay comida. Asi un tablero lleno ya no congela el juego.
+        for _ in range(500):
             x, y = random.randint(0, self.ancho - 1), random.randint(0, self.alto - 1)
             # ACT4: tampoco sobre nubes, venenos ni escudo
             if (x, y) not in self.serpiente_cuerpo and not self.snake_ocupada_extra((x, y)):
                 self.posicion_comida = (x, y)
-                break
+                return
+        libres = [(x, y) for y in range(self.alto) for x in range(self.ancho)
+                  if (x, y) not in self.serpiente_cuerpo and not self.snake_ocupada_extra((x, y))]
+        if libres:
+            self.posicion_comida = random.choice(libres)
+        else:
+            self.posicion_comida = None
                 
     def snake_mover_jugador(self):
         if not self.serpiente_cuerpo: return
@@ -449,7 +458,7 @@ class Juego:
 
 
     # =====================================================================
-    # ACT4 (Snake evolved) - LOGICA DEL JUEGO                [Integrante 2]
+    # ACT4: (Snake evolved) - LOGICA DEL JUEGO                [Integrante 2]
     # ---------------------------------------------------------------------
     # QUE SE AGREGO: manejador de estados (NORMAL / INVULNERABLE / GAME_OVER),
     # niveles BABY / ENTUSIASTA / NYAN_CAT, frutas venenosas, nubes, fruta de
@@ -603,14 +612,17 @@ class Juego:
         self.snake_revisar_subida_nivel()
 
     def snake_es_invulnerable(self):
+        # ACT4: True mientras el escudo siga activo (compara contra time.time())
         return self.estado_snake == 'INVULNERABLE' and time.time() < self.invulnerable_hasta
 
     def snake_segundos_restantes(self):
+        # ACT4: segundos que le quedan al escudo (lo muestra el panel)
         if self.estado_snake != 'INVULNERABLE':
             return 0.0
         return max(0.0, self.invulnerable_hasta - time.time())
 
     def snake_duracion_escudo(self):
+        # ACT4: duracion del escudo en segundos (nivel o SHIELD_FRUIT)
         # Duracion en segundos: la del nivel (shield_duration) o la de SHIELD_FRUIT
         valor = self.cfg_nivel.get('shield_duration', self.snake_ent['shield']['duration'])
         try:
@@ -619,16 +631,19 @@ class Juego:
             return float(SNAKE_ENTIDADES_DEFECTO['shield']['duration'])
 
     def snake_game_over(self):
+        # ACT4: pasa al estado GAME_OVER
         self.juego_terminado = True
         self.estado_snake = 'GAME_OVER'
 
     # --- Aparicion de entidades (decision D4: solo celdas libres) ---
 
     def snake_ocupada_extra(self, pos):
+        # ACT4: True si la celda tiene nube, veneno o escudo
         # True si hay una nube, veneno o escudo en esa celda
         return pos in self.nubes or pos in self.venenos or pos == self.escudo
 
     def snake_celda_libre(self, lejos_de_cabeza=0):
+        # ACT4: aparicion en celdas libres (decision D4)
         # Elige una celda al azar que no tenga serpiente, comida ni otra
         # entidad. Con lejos_de_cabeza=n evita un cuadro de radio n alrededor
         # de la cabeza (para que una nube no aparezca pegada a la serpiente).
@@ -651,12 +666,14 @@ class Juego:
         return random.choice(libres)
 
     def snake_generar_nubes(self):
+        # ACT4: crea las nubes fijas del nivel
         for _ in range(int(self.snake_ent['cloud']['count'])):
             celda = self.snake_celda_libre(3)
             if celda:
                 self.nubes.append(celda)
 
     def snake_reponer_venenos(self):
+        # ACT4: mantiene la cantidad de frutas venenosas del nivel
         while len(self.venenos) < int(self.snake_ent['poison']['count']):
             celda = self.snake_celda_libre()
             if not celda:
@@ -664,6 +681,7 @@ class Juego:
             self.venenos.append(celda)
 
     def snake_generar_escudo(self):
+        # ACT4: crea la fruta de escudo en una celda libre
         celda = self.snake_celda_libre()
         if celda:
             self.escudo = celda
@@ -716,7 +734,7 @@ class Juego:
         self.escudo_reaparece = self.invulnerable_hasta + SNAKE_ESPERA_ESCUDO
 
     # =====================================================================
-    # ACT4 (Snake evolved) - DIBUJO Y EFECTOS VISUALES       [Integrante 3]
+    # ACT4: (Snake evolved) - DIBUJO Y EFECTOS VISUALES       [Integrante 3]
     # ---------------------------------------------------------------------
     # QUE SE AGREGO: segmentos CIRCULAR / TRIANGULAR (create_oval /
     # create_polygon), cabeza de gato, cola arcoiris (COLORES[i % n]),
@@ -730,10 +748,12 @@ class Juego:
     # =====================================================================
 
     def _esc(self, v):
+        # ACT4: escala medidas con el tamano de celda
         # Escala una medida pensada para una celda de 25 px al tamano real
         return int(round(v * self.taman_celda / 25.0))
 
     def snake_dibujar_todo(self):
+        # ACT4: dibuja comida, entidades, serpiente y panel
         COLOR_FOOD = '#FF0000'
         if self.posicion_comida:
             x, y = self.posicion_comida
@@ -748,6 +768,7 @@ class Juego:
         self.snake_actualizar_panel()
 
     def snake_dibujar_serpiente(self):
+        # ACT4: dibuja la serpiente de la cola a la cabeza (forma, colores, parpadeo)
         cuerpo = self.serpiente_cuerpo
         forma = self.snake_estilo['form']
         base = self.snake_estilo['color']
@@ -787,6 +808,7 @@ class Juego:
                 self.snake_dibujar_forma(x, y, forma, color, direccion)
 
     def snake_dibujar_forma(self, x, y, forma, color, direccion=(0, -1)):
+        # ACT4: rectangulo, circulo o triangulo
         # Firma comun de dibujo: (columna, fila, forma, color[, direccion]).
         # RECTANGLE reutiliza dibujar_celda (comportamiento original).
         ts = self.taman_celda
@@ -811,6 +833,7 @@ class Juego:
             self.dibujar_celda(x, y, color)
 
     def snake_dibujar_cabeza_gato(self, x, y, color):
+        # ACT4: cabeza de gato con primitivas del Canvas
         # Cabeza de Nyan Cat con pocas primitivas: circulo + 2 orejas
         # triangulares + 2 ojos + nariz + bigotes.
         p = self._esc
@@ -832,6 +855,7 @@ class Juego:
         c.create_line(x2 - p(1), y1 + p(17), x2 - p(7), y1 + p(18), fill='#000000')
 
     def snake_dibujar_nube(self, x, y):
+        # ACT4: nube de tres ovalos
         # Nube: 3 ovalos solapados del color de CLOUD
         p = self._esc
         x1, y1 = x * self.taman_celda, y * self.taman_celda
@@ -840,6 +864,7 @@ class Juego:
             self.canvas.create_oval(x1 + p(a), y1 + p(b), x1 + p(c2), y1 + p(d), fill=color, outline='')
 
     def snake_dibujar_veneno(self, x, y):
+        # ACT4: fruta venenosa (circulo morado con calavera)
         # Fruta venenosa: circulo del color de POISON_FRUIT con "calavera" simple
         p = self._esc
         x1, y1 = x * self.taman_celda, y * self.taman_celda
@@ -851,6 +876,7 @@ class Juego:
         c.create_line(x1 + p(8), y1 + p(17), x1 + p(17), y1 + p(17), fill='#FFFFFF')
 
     def snake_dibujar_escudo(self, x, y):
+        # ACT4: fruta de escudo (estrella dorada)
         # Fruta de escudo: estrella de 5 puntas del color de SHIELD_FRUIT
         ts = self.taman_celda
         cx, cy = x * ts + ts / 2.0, y * ts + ts / 2.0
@@ -864,6 +890,7 @@ class Juego:
         self.canvas.create_polygon(pts, fill=self.snake_ent['shield']['color'], outline='#000000')
 
     def snake_actualizar_panel(self):
+        # ACT4: panel lateral: nivel y cuenta regresiva del escudo
         # Panel lateral: nivel actual y cuenta regresiva del escudo
         if not self.snake_multinivel:
             return

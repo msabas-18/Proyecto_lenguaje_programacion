@@ -6,7 +6,7 @@
 # CAMBIOS SELECCION PONDERADA: soporte de atributo WEIGHT (entero >= 0) en DEFINE SHAPE.
 #   WEIGHT es opcional (por defecto 1), asi los .brick antiguos siguen funcionando.
 #
-# CAMBIOS ACTIVIDAD 4 (Snake evolved): todo el codigo nuevo lleva el comentario "# ACT4".
+# CAMBIOS ACTIVIDAD 4 (Snake evolved): todo el codigo nuevo lleva el comentario "# ACT4:".
 #   - DEFINE SHAPE acepta FORM, PENALTY, COUNT y DURATION en las figuras SNAKE_BODY,
 #     POISON_FRUIT, CLOUD y SHIELD_FRUIT (solo con GAME_TYPE SNAKE).
 #   - Bloque nuevo DEFINE LEVELS ... END con DEFAULT_LEVEL, LEVEL_UP_SCORE y LEVEL <nombre>.
@@ -95,7 +95,7 @@ class Parser:
                 if self.posicion + 1 < len(self.tokens) and self.tokens[self.posicion + 1] == 'POWERUP':
                     self.parsear_powerup()
                 elif self.posicion + 1 < len(self.tokens) and self.tokens[self.posicion + 1] == 'LEVELS':
-                    self.parsear_levels()  # ACT4
+                    self.parsear_levels()  # ACT4:
                 else:
                     self.parsear_shape()
             elif token_actual == 'ON':
@@ -191,7 +191,7 @@ class Parser:
         peso = PESO_POR_DEFECTO
         while self.posicion < len(self.tokens) and self.tokens[self.posicion] in ('COLOR', 'WEIGHT') + ATRIBUTOS_SNAKE:  # ACT4: + atributos nuevos
             clave = self.consumir()
-            linea_clave = self.linea_de(self.posicion - 1)  # ACT4
+            linea_clave = self.linea_de(self.posicion - 1)  # ACT4:
             self.consumir(':')
             linea_valor = linea_clave  # ACT4: los errores de valor apuntan a la linea de la etiqueta
             valor = self.consumir()
@@ -215,7 +215,7 @@ class Parser:
                 if valor is None or not re.match('^' + PATRON_COLOR + '$', valor):
                     raise Exception("Error de sintaxis: Se esperaba un color hexadecimal (#RRGGBB) en la figura '" + nombre_shape + "' pero se encontro '" + str(valor) + "'" + self.donde(linea_valor))  # ACT4: linea
                 color = valor
-                extras['color'] = valor  # ACT4
+                extras['color'] = valor  # ACT4:
             else:
                 if valor is None or not re.match(r'^\d+$', valor):
                     raise Exception("Error de sintaxis: Se esperaba un entero >= 0 como WEIGHT en la figura '" + nombre_shape + "' pero se encontro '" + str(valor) + "'" + self.donde(linea_valor))  # ACT4: linea
@@ -240,7 +240,7 @@ class Parser:
                 self.consumir(']')
                 matriz.append(fila)
             estados.append(matriz)
-        linea_end = self.linea_de(self.posicion)  # ACT4
+        linea_end = self.linea_de(self.posicion)  # ACT4:
         self.consumir('END')
         if es_entidad:  # ACT4: figura especial de Snake -> diccionario; no entra en colors ni weights
             if isinstance(self.ast['shapes'].get(nombre_shape), dict):
@@ -461,7 +461,7 @@ if __name__ == "__main__":
         parser = Parser(tokens, lineas)
         ast = parser.parse()
         generar_codigo(ast, archivo_salida)
-        for aviso in parser.advertencias:  # ACT4
+        for aviso in parser.advertencias:  # ACT4:
             print aviso
         print "Compilacion exitosa! Archivo de juego creado en " + archivo_salida
     except Exception as e:
