@@ -8,6 +8,7 @@
 # CAMBIOS ACTIVIDAD 4 (Snake evolved): niveles BABY/ENTUSIASTA/NYAN_CAT, formas CIRCULAR/TRIANGULAR,
 # frutas venenosas, nubes, power-up "No Morir" con temporizador y panel de nivel. Todo el codigo
 # nuevo lleva el comentario "# ACT4:". Sin "levels" en el JSON el Snake se comporta como el original.
+# Al cambiar de nivel (tambien al subir solo) el escudo activo conserva su tiempo restante.
 
 import sys
 import json
@@ -565,17 +566,23 @@ class Juego:
         self.velocidad_gravedad = tick / 1000.0   # el tick del .brick va en milisegundos
         self.timer_gravedad = 0
 
+        # ACT4: si el escudo esta activo al cambiar de nivel (por ejemplo al subir de nivel solo), se
+        # conserva el tiempo que le queda: el jugador no pierde la invulnerabilidad que acaba de ganar.
+        conservar_escudo = self.snake_es_invulnerable()
+
         # Se limpia lo del nivel anterior y se crea lo que este nivel activa
         self.nubes = []
         self.venenos = []
         self.escudo = None
-        self.estado_snake = 'NORMAL'
-        self.invulnerable_hasta = 0.0
+        if not conservar_escudo:
+            self.estado_snake = 'NORMAL'
+            self.invulnerable_hasta = 0.0
         if cfg['clouds']:
             self.snake_generar_nubes()
         if cfg['poison'] != 'OFF':
             self.snake_reponer_venenos()
-        if cfg['shield']:
+        # ACT4: con el escudo activo no se crea otra fruta; reaparece sola cuando el efecto termina
+        if cfg['shield'] and not conservar_escudo:
             self.snake_generar_escudo()
 
     def snake_saltar_nivel(self, indice):

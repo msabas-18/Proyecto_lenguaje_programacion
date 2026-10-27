@@ -12,6 +12,7 @@
 #   - Bloque nuevo DEFINE LEVELS ... END con DEFAULT_LEVEL, LEVEL_UP_SCORE y LEVEL <nombre>.
 #   - Si un SNAKE no trae LEVELS se escribe solo el nivel BABY con los valores del Snake original.
 #   - Los errores indican el numero de linea del .brick.
+#   - El lexer avisa (sin detener la compilacion) de las palabras escritas en minuscula, que ignora.
 #   Todo lo nuevo es opcional: snake.brick, tetris.brick y tetris_remake.brick generan el mismo JSON de antes
 #   (snake.brick solo agrega las claves default_level, level_order y levels con el nivel BABY).
 
@@ -48,6 +49,11 @@ PASO_TICK_MS = 25   # el runtime avanza de 25 en 25 ms
 NIVEL_BABY_ORIGINAL = {'tick': 150, 'poison': 'OFF', 'shield': False,
                        'clouds': False, 'head': 'NORMAL', 'tail': 'NORMAL'}
 
+# ACT4: palabras con minusculas (el lenguaje solo usa MAYUSCULAS). El lexer las ignora igual que el
+# original, pero ahora deja una advertencia con su linea para que un error de tipeo no pase desapercibido.
+PATRON_MINUSCULAS = r'\b[A-Za-z_]*[a-z][A-Za-z_]*\b'
+AVISOS_LEXER = []
+
 def lexer_con_lineas(codigo_fuente):
     # ACT4: igual que el lexer original pero recuerda la linea de cada token, para que los
     # errores digan en que linea del .brick esta el problema. Devuelve (tokens, lineas).
@@ -56,8 +62,12 @@ def lexer_con_lineas(codigo_fuente):
     token_regex = PATRON_COLOR + r'|\b[A-Z_]+\b|-?\d+|[\[\](),:]'
     tokens = []
     lineas = []
+    del AVISOS_LEXER[:]
     for numero, linea in enumerate(codigo_fuente.splitlines()):
         linea = re.sub(r'#(?!(?:[0-9A-Fa-f]{6}|[0-9A-Fa-f]{3})\b).*', '', linea)
+        # ACT4: se quitan los colores antes de buscar palabras en minuscula (#00ff00 es un color valido)
+        for palabra in re.findall(PATRON_MINUSCULAS, re.sub(PATRON_COLOR, ' ', linea)):
+            AVISOS_LEXER.append("Advertencia: se ignora la palabra '" + palabra + "' porque BrickScript solo usa MAYUSCULAS (linea " + str(numero + 1) + ")")
         for token in re.findall(token_regex, linea):
             tokens.append(token)
             lineas.append(numero + 1)
@@ -458,6 +468,8 @@ if __name__ == "__main__":
         with open(archivo_entrada, 'r') as f:
             codigo = f.read()
         tokens, lineas = lexer_con_lineas(codigo)  # ACT4: el lexer tambien devuelve la linea de cada token
+        for aviso in AVISOS_LEXER:  # ACT4: advertencias del lexer (palabras en minuscula)
+            print aviso
         parser = Parser(tokens, lineas)
         ast = parser.parse()
         generar_codigo(ast, archivo_salida)
