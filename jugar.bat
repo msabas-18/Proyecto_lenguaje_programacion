@@ -11,6 +11,7 @@ if "%1"=="" (
     echo  Ejemplo: jugar tetris_remake
     echo  Ejemplo: jugar snake
     echo  Ejemplo: jugar tetris
+    echo  Ejemplo: jugar snake_evolved
     echo.
     goto :eof
 )
