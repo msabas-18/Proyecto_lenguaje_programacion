@@ -1,45 +1,81 @@
 =============================================================
  ACTIVIDAD 4 - SNAKE EVOLVED: INFORME DE CAMBIOS (snake_evolved_changes.txt)
 =============================================================
-Se compara contra el proyecto original (original.zip). Todo el codigo agregado o
-modificado lleva el comentario "# ACT4:" (se puede contar con: buscar "ACT4:").
-Los numeros de linea son los de los archivos entregados.
+Este informe explica que se cambio, donde y por que. Se compara contra el proyecto original
+(antes de la Actividad 4). Todo el codigo agregado o modificado lleva el comentario "# ACT4:"
+(en cada bloque o funcion nueva), asi se puede encontrar con la busqueda "ACT4". Los numeros de linea
+son los de los archivos entregados.
 
-ARCHIVOS
-  compiler.py                       modificado   219 -> 469 lineas  (+264 nuevas o modificadas, 14 reemplazadas)
-  runtime.py                        modificado   400 -> 923 lineas  (+541 nuevas o modificadas, 18 reemplazadas)
-  gramaticas bnf\snake_evolved.bnf  nuevo        107 lineas
+-------------------------------------------------------------
+0. RESUMEN EN 30 SEGUNDOS
+-------------------------------------------------------------
+El Snake ahora tiene tres niveles (BABY, ENTUSIASTA y NYAN_CAT) definidos por completo en el archivo
+.brick. Para lograrlo se tocaron los tres componentes del lenguaje, en el orden en que viaja la informacion:
+
+  snake_evolved.brick  -->  compiler.py  -->  snake_evolved.json  -->  runtime.py
+  (lo escribe el          (lo entiende y     (representacion        (lo ejecuta y
+   programador)            lo valida)         intermedia)            lo dibuja)
+  snake_evolved.bnf describe formalmente lo que el compilador acepta.
+
+Que hace cada nivel (todo se configura en el .brick, nada esta "quemado" en el motor):
+  BABY (por defecto)  tick 150 ms. Sin frutas venenosas, sin nubes, sin escudo. Es el Snake original.
+  ENTUSIASTA          tick 100 ms. Frutas venenosas (restan puntos) y fruta de escudo "No Morir".
+  NYAN_CAT            tick 75 ms (el doble de rapido que BABY). Ademas: nubes obstaculo, cabeza de gato
+                      y cola multicolor.
+
+Regla de oro (retrocompatibilidad): todo lo nuevo es opcional y tiene un valor por defecto igual al
+Snake original. Un .brick que no menciona niveles se compila y se juega como el nivel BABY.
+
+-------------------------------------------------------------
+1. ARCHIVOS DE LA ENTREGA
+-------------------------------------------------------------
+  compiler.py                       modificado   219 -> 481 lineas
+  runtime.py                        modificado   400 -> 930 lineas
+  gramaticas bnf\snake_evolved.bnf  nuevo        gramatica de snake.bnf mas las reglas de la Actividad 4
   games\snake_evolved.brick         nuevo        juego con los tres niveles
-  jugar.bat                         SIN cambios  (ya acepta "jugar snake_evolved")
-  snake.bnf, tetris.bnf, tetris_remake.bnf, snake.brick, tetris.brick, tetris_remake.brick: sin cambios
+  snake_evolved_changes.txt         nuevo        este informe
+  jugar.bat                         SIN cambios  ya acepta "jugar snake_evolved" (ver seccion 9)
+  Sin cambios: snake.bnf, tetris.bnf, tetris_remake.bnf, snake.brick, tetris.brick, tetris_remake.brick.
+
+Para jugar:  jugar snake_evolved     (para el Snake original:  jugar snake)
 
 -------------------------------------------------------------
-1. SINTAXIS NUEVA DEL .brick (todo es opcional)
+2. SINTAXIS NUEVA DEL .brick (todo es opcional)
 -------------------------------------------------------------
-Figuras especiales (solo con GAME_TYPE SNAKE; no llevan STATE):
+Figuras especiales (solo con GAME_TYPE SNAKE; no llevan STATE, cada una admite solo sus atributos):
   DEFINE SHAPE SNAKE_BODY:   FORM: CIRCULAR | TRIANGULAR | RECTANGLE   COLOR: #RRGGBB   END
-  DEFINE SHAPE POISON_FRUIT: COLOR: #...   PENALTY: n   [COUNT: n]   END
-  DEFINE SHAPE CLOUD:        COLOR: #...   COUNT: n    END
-  DEFINE SHAPE SHIELD_FRUIT: COLOR: #...   DURATION: n END        (segundos)
+  DEFINE SHAPE POISON_FRUIT: COLOR: #...   PENALTY: n   [COUNT: n]   END    (puntos que resta)
+  DEFINE SHAPE CLOUD:        COLOR: #...   COUNT: n    END                  (cuantas nubes)
+  DEFINE SHAPE SHIELD_FRUIT: COLOR: #...   DURATION: n END                  (segundos de invulnerabilidad)
 
 Bloque de niveles:
   DEFINE LEVELS:
     DEFAULT_LEVEL: BABY            (opcional, por defecto BABY)
-    LEVEL_UP_SCORE: 50             (opcional; 0 = sin avance automatico)
+    LEVEL_UP_SCORE: 50             (opcional; 0 o ausente = sin avance automatico)
     LEVEL BABY:       TICK: 150
     LEVEL ENTUSIASTA: TICK: 100  POISON: SUBTRACT  SHIELD: ON
     LEVEL NYAN_CAT:   TICK: 75   POISON: SUBTRACT  SHIELD: ON  CLOUDS: ON  HEAD: CAT  TAIL: RAINBOW
   END
   - Un LEVEL termina cuando empieza otro LEVEL o llega el END del bloque.
-  - Atributos de un LEVEL: TICK (ms), POISON (OFF|SUBTRACT|KILL), SHIELD y CLOUDS (ON|OFF),
-    HEAD (NORMAL|CAT), TAIL (NORMAL|RAINBOW), SHIELD_DURATION (segundos, opcional).
+  - Atributos de un LEVEL: TICK (milisegundos), POISON (OFF | SUBTRACT | KILL), SHIELD y CLOUDS (ON | OFF),
+    HEAD (NORMAL | CAT), TAIL (NORMAL | RAINBOW) y SHIELD_DURATION (segundos, opcional: pisa al DURATION
+    de SHIELD_FRUIT solo en ese nivel).
   - Lo que un LEVEL no escribe queda como en el Snake original:
     TICK 150, POISON OFF, SHIELD OFF, CLOUDS OFF, HEAD NORMAL, TAIL NORMAL.
-  - Sin DEFINE LEVELS el juego es el Snake original (solo nivel BABY).
-  - TICK en milisegundos y multiplo de 25 (si no, el juego lo redondea hacia arriba y el compilador avisa).
+  - TICK debe ser multiplo de 25 ms (el motor avanza de 25 en 25 ms). Si no lo es, el compilador avisa y el
+    juego redondea hacia arriba (130 ms se juega a 150 ms).
+
+Como se cumple cada punto del enunciado:
+  A. Formas circular y triangular desde DEFINE SHAPE ........ FORM en SNAKE_BODY
+  A. Cabeza de gato y cola multicolor (Nyan Cat) ............ HEAD: CAT y TAIL: RAINBOW en el nivel
+  B. Frutas venenosas (restan puntos o terminan el juego) ... POISON_FRUIT + POISON: SUBTRACT | KILL
+  B. Nubes obstaculo ........................................ CLOUD + CLOUDS: ON
+  B. Power-Up "No Morir" de n segundos ...................... SHIELD_FRUIT con DURATION: n + SHIELD: ON
+  C. Bloque LEVELS con tres configuraciones ................. DEFINE LEVELS ... END
+  D. snake.brick original sigue funcionando como Baby ....... valores por defecto (seccion 8)
 
 -------------------------------------------------------------
-2. JSON QUE ESCRIBE EL COMPILADOR (claves nuevas)
+3. JSON QUE ESCRIBE EL COMPILADOR (claves nuevas)
 -------------------------------------------------------------
   "default_level": "BABY",
   "level_up_score": 50,                         (solo si el .brick lo escribe)
@@ -52,164 +88,252 @@ Bloque de niveles:
               "SHIELD_FRUIT": {"color":"#FFD700","duration":8} }
   - Estas cuatro figuras se guardan como diccionario con lo que escribio el programador (no entran en
     "colors" ni "weights"). PIXEL y las piezas de Tetris no cambian.
-  - snake.brick (sin LEVELS) ahora genera ademas: default_level BABY, level_order ["BABY"] y
-    levels {BABY con los valores originales}. tetris.json y tetris_remake.json salen igual que antes.
+  - El runtime lee estas claves en un solo lugar (snake_cargar_config), con valores por defecto.
 
 -------------------------------------------------------------
-3. compiler.py
+4. compiler.py - QUE CAMBIO Y POR QUE
 -------------------------------------------------------------
-Lineas del original que se reemplazaron:
-  - def lexer(...) (antes L19-24)  -> ahora lexer_con_lineas (L51) y lexer (L67, misma firma, devuelve solo los tokens).
-    La expresion de numeros paso de \d+ a -?\d+ para poder rechazar un TICK negativo.
-  - Parser.__init__(self, tokens) (L28) -> Parser.__init__(self, tokens, lineas=None) (L73).
-  - consumir (L119 y L123): los dos mensajes de error agregan " (linea N)".
-  - parsear_shape (L180-253): el ciclo de atributos admite FORM, PENALTY, COUNT y DURATION ademas de
-    COLOR y WEIGHT; los errores de COLOR y WEIGHT agregan la linea.
-  - main (L460-461): usa lexer_con_lineas y Parser(tokens, lineas); imprime las advertencias.
+Idea: el Parser aprende a reconocer las etiquetas nuevas y las guarda en el JSON; si no aparecen, escribe los
+valores por defecto en lugar de fallar.
+
+Lineas del original que se reemplazaron (14):
+  - def lexer(...)  ->  lexer_con_lineas (L57) y lexer (L77, misma firma, devuelve solo los tokens).
+    Por que: para que cada error diga en que linea del .brick esta. El numero admite signo (-?\d+) solo para
+    poder rechazar un TICK negativo con un mensaje claro en lugar de ignorarlo.
+  - Parser.__init__(self, tokens)  ->  (self, tokens, lineas=None) (L82). El parametro es opcional.
+  - consumir (L125-135): los dos mensajes de error agregan " (linea N)".
+  - parsear_shape (L190-263): el ciclo de atributos admite FORM, PENALTY, COUNT y DURATION ademas de COLOR y
+    WEIGHT; los errores de COLOR y WEIGHT agregan la linea.
+  - main (L460-481): usa lexer_con_lineas y Parser(tokens, lineas) e imprime las advertencias.
 
 Codigo nuevo:
-  - Constantes (L28-49): ATRIBUTOS_SNAKE, ENTIDADES_SNAKE, FORMAS_VALIDAS, NIVELES_VALIDOS,
-    NIVEL_POR_DEFECTO, VENENO_VALIDOS, CABEZAS_VALIDAS, COLAS_VALIDAS, ATRIBUTOS_NIVEL,
-    CIERRAN_NIVEL, PASO_TICK_MS, NIVEL_BABY_ORIGINAL.
-  - parse (L87): nueva rama DEFINE LEVELS -> parsear_levels, y al final completar_snake().
-  - Parser.__init__: nuevos campos lineas, advertencias, niveles, nivel_defecto, linea_nivel_defecto, subida_nivel.
-  - linea_de (L127), donde (L137), entero (L145), elegir (L160): indican la linea del error y validan valores.
-  - parsear_levels (L255): lee DEFAULT_LEVEL, LEVEL_UP_SCORE y los LEVEL hasta el END del bloque.
-  - parsear_nivel (L299): lee y valida los atributos de un nivel; deja en el nivel los valores originales
-    de lo que no se escribe; avisa si TICK no es multiplo de 25.
-  - completar_snake (L345): agrega BABY si falta (siempre existe), calcula level_order en el orden
-    BABY, ENTUSIASTA, NYAN_CAT, comprueba DEFAULT_LEVEL y escribe default_level, level_order, levels y
-    level_up_score en el JSON; solo actua con GAME_TYPE SNAKE.
+  - Constantes (L29-50): ATRIBUTOS_SNAKE, ENTIDADES_SNAKE (que atributos admite cada figura), FORMAS_VALIDAS,
+    NIVELES_VALIDOS, NIVEL_POR_DEFECTO, VENENO_VALIDOS, CABEZAS_VALIDAS, COLAS_VALIDAS, ATRIBUTOS_NIVEL,
+    CIERRAN_NIVEL, PASO_TICK_MS y NIVEL_BABY_ORIGINAL (los valores del Snake original).
+  - parse (L97): rama nueva "DEFINE LEVELS" -> parsear_levels, y al final completar_snake().
+  - linea_de (L137), donde (L147), entero (L155), elegir (L170): ayudas que indican la linea del error y
+    validan numeros y palabras permitidas.
+  - parsear_levels (L265): lee DEFAULT_LEVEL, LEVEL_UP_SCORE y los LEVEL hasta el END del bloque.
+  - parsear_nivel (L309): lee y valida los atributos de un nivel; parte de los valores originales, asi lo que
+    no se escribe queda como en el Snake.
+  - completar_snake (L355): agrega BABY si falta (BABY siempre existe), calcula level_order, comprueba que
+    DEFAULT_LEVEL exista y escribe default_level, level_order, levels y level_up_score en el JSON.
+    Solo actua con GAME_TYPE SNAKE.
+  - Aviso de minusculas (L54-55 y L57-76): una palabra en minuscula (por ejemplo "morado" en lugar de un
+    color) el lexer ya la ignoraba; ahora ademas deja una advertencia con su linea. No detiene la compilacion,
+    asi que no afecta a los juegos anteriores.
+
 Validaciones (todas indican la linea del .brick):
-  nivel desconocido o repetido; TICK, DURATION y SHIELD_DURATION mayores que cero; PENALTY, COUNT y
-  LEVEL_UP_SCORE >= 0; valores permitidos de POISON, SHIELD, CLOUDS, HEAD, TAIL y FORM; atributo en
-  una figura que no lo admite (por ejemplo PENALTY en CLOUD); STATE dentro de una figura especial; figura o
-  DEFINE LEVELS repetidos; DEFINE LEVELS vacio; DEFAULT_LEVEL no definido; DEFINE LEVELS o FORM en un
-  juego que no es SNAKE; bloque sin END (el mensaje sugiere que falta el END de DEFINE LEVELS).
-Advertencias (no detienen la compilacion): TICK que no es multiplo de 25 ms; un nivel que activa
-  CLOUDS, POISON o SHIELD sin su DEFINE SHAPE (se usan los valores por defecto).
+  - nivel desconocido o repetido; TICK, DURATION y SHIELD_DURATION mayores que cero; PENALTY, COUNT y
+    LEVEL_UP_SCORE >= 0;
+  - valores permitidos de POISON, SHIELD, CLOUDS, HEAD, TAIL y FORM;
+  - atributo en una figura que no lo admite (por ejemplo PENALTY en CLOUD); STATE dentro de una figura
+    especial; figura o DEFINE LEVELS repetidos; DEFINE LEVELS vacio; DEFAULT_LEVEL sin definir;
+  - DEFINE LEVELS o FORM en un juego que no es SNAKE; bloque sin END (el mensaje sugiere que falta el END).
+Advertencias (no detienen la compilacion): TICK que no es multiplo de 25 ms; un nivel que activa CLOUDS,
+  POISON o SHIELD sin su DEFINE SHAPE (se usan valores por defecto); palabras en minuscula.
 
 -------------------------------------------------------------
-4. runtime.py - lineas del original que cambiaron
+5. runtime.py - LINEAS DEL ORIGINAL QUE CAMBIARON (20)
 -------------------------------------------------------------
-  L7-10    comentario de cabecera de la Actividad 4.
-  L15      import math (estrella de la fruta de escudo).
-  L79-85   __init__: paso_loop (0.025 s en Snake, 0.05 s en Tetris) y tolerancia_tick (1e-9 en Snake, 0 en Tetris).
-  L134-141 __init__ (Snake): llama a snake_cargar_config() y crea el panel de nivel y escudo si hay 2 o mas niveles.
-  L145-147 __init__: despues de ON_START llama a snake_aplicar_nivel(nivel inicial).
-  L162-163 game_loop: timer_gravedad += paso_loop (antes 0.05) y la comparacion con tolerancia_tick.
-  L167-169 game_loop: llama a snake_actualizar_estado() antes de dibujar.
-  L174     game_loop: root.after(int(paso_loop * 1000), ...) (antes 50).
-  L201-202 manejar_input_gui: las teclas 1, 2 y 3 llaman a snake_saltar_nivel.
-  L236-239 dibujar: las 9 lineas que dibujaban comida y serpiente se reemplazaron por snake_dibujar_todo().
-  L401-416 snake_spawn_comida: la comida tampoco cae sobre nubes, venenos ni escudo; el "while True" se
-           cambio por 500 intentos al azar (mismos numeros aleatorios mientras haya sitio) y despues se
-           elige entre las celdas libres; si no queda ninguna, posicion_comida = None (antes el juego se
-           podia quedar en un ciclo infinito con el tablero lleno).
-  L429-430 snake_mover_jugador: el propio cuerpo solo mata si NO hay invulnerabilidad.
-  L436-439 snake_mover_jugador: despues de insertar la cabeza llama a snake_procesar_entidades() y
-           sale si el juego termino. Las paredes siguen matando siempre.
-  Con el JSON del Snake original (sin "levels") el juego se comporta igual que antes: tick de 150 ms, sin
-  panel de niveles ni teclas 1-3. Tetris y Tetris remake conservan su temporizacion (50 ms).
+Estas son las unicas partes del codigo original que se tocaron; todo lo demas es codigo agregado.
+  L7-11    comentario de cabecera de la Actividad 4.
+  L16      import math (para dibujar la estrella de la fruta de escudo).
+  L80-86   __init__: paso_loop (0.025 s en Snake, 0.05 s en Tetris) y tolerancia_tick (1e-9 en Snake, 0 en
+           Tetris). Por que: los TICK de los niveles son multiplos de 25 ms, y el bucle original avanzaba
+           de 50 en 50 ms, lo que impedia un tick de 75 ms. Tetris conserva exactamente su temporizacion.
+  L135-142 __init__ (Snake): llama a snake_cargar_config() y crea el panel de nivel y escudo si hay 2 o
+           mas niveles.
+  L146-148 __init__: despues de ON_START llama a snake_aplicar_nivel(nivel inicial) (en ON_START aparece
+           la serpiente).
+  L163-164 game_loop: timer_gravedad += paso_loop (antes 0.05) y la comparacion con tolerancia_tick
+           (evita que 6 sumas de 0.025 den 0.14999 y se pierda un ciclo).
+  L167-170 game_loop: llama a snake_actualizar_estado() antes de dibujar.
+  L175     game_loop: root.after(int(paso_loop * 1000), ...) (antes 50).
+  L202-203 manejar_input_gui: las teclas 1, 2 y 3 llaman a snake_saltar_nivel (util para la demo).
+  L237-239 dibujar: las lineas que dibujaban comida y serpiente se reemplazaron por snake_dibujar_todo().
+  L403-417 snake_spawn_comida: la comida tampoco cae sobre nubes, venenos ni escudo; el "while True" se
+           cambio por 500 intentos al azar y despues se elige entre las celdas libres; si no queda
+           ninguna, posicion_comida = None (antes el juego se podia quedar en un ciclo infinito con el
+           tablero lleno).
+  L429-431 snake_mover_jugador: el propio cuerpo solo mata si NO hay invulnerabilidad.
+  L436-441 snake_mover_jugador: despues de insertar la cabeza llama a snake_procesar_entidades() y sale si
+           el juego termino. Las paredes siguen matando siempre.
+Con el JSON del Snake original (sin "levels") el juego se comporta igual que antes: tick de 150 ms, sin panel
+de niveles ni teclas 1-3. Tetris y Tetris remake conservan su temporizacion (50 ms).
 
 -------------------------------------------------------------
-5. runtime.py - codigo nuevo: logica del juego (L459-735)
+6. runtime.py - CODIGO NUEVO: LOGICA DEL JUEGO (L460-741)
 -------------------------------------------------------------
-Constantes (L27-39): SNAKE_NIVEL_DEFECTO (= Snake original), SNAKE_ORDEN_NIVELES, SNAKE_ENTIDADES_DEFECTO,
-  SNAKE_ESPERA_ESCUDO (6 s), SNAKE_COLORES_ARCOIRIS. Funciones auxiliares (L41-62): _minusculas, _es_si, _aclarar.
+Constantes (L28-40): SNAKE_NIVEL_DEFECTO (= Snake original), SNAKE_ORDEN_NIVELES, SNAKE_ENTIDADES_DEFECTO,
+  SNAKE_ESPERA_ESCUDO (6 s), SNAKE_COLORES_ARCOIRIS. Funciones auxiliares (L42-67): _minusculas, _es_si, _aclarar.
 
-snake_cargar_config (L475)   lee del JSON niveles, orden, nivel inicial, level_up_score, estilo del cuerpo
-                             y entidades, con valores por defecto. Es la unica funcion que lee los nombres del JSON.
-snake_aplicar_nivel (L539)   activa un nivel: mezcla su configuracion con los valores originales, fija
-                             velocidad_gravedad = tick / 1000, reinicia el temporizador, borra lo del nivel anterior
-                             y crea las nubes, venenos y escudo que el nivel activa.
-snake_saltar_nivel (L581)    teclas 1, 2 y 3; no hace nada si hay un solo nivel. Guarda el puntaje del salto.
-snake_revisar_subida_nivel (L588)  avance automatico: del nivel i al i+1 con LEVEL_UP_SCORE x (i+1) puntos;
-                             despues de un salto manual hace falta ganar puntos nuevos para volver a subir solo.
-snake_actualizar_estado (L599)  MANEJADOR DE ESTADOS, en cada vuelta del game_loop:
-                             NORMAL -> INVULNERABLE al comer el escudo; INVULNERABLE -> NORMAL cuando termina
-                             el tiempo; cualquiera -> GAME_OVER si el juego termino. Tambien hace reaparecer
-                             la fruta de escudo y revisa el avance de nivel.
-snake_es_invulnerable (L614), snake_segundos_restantes (L618), snake_duracion_escudo (L624), snake_game_over (L633).
-snake_ocupada_extra (L640), snake_celda_libre (L645), snake_generar_nubes (L668), snake_reponer_venenos (L675),
-  snake_generar_escudo (L683): aparicion en celdas libres. Una celda libre no tiene serpiente, comida ni
-  otra entidad; las nubes ademas aparecen a mas de 3 celdas de la cabeza.
-snake_procesar_entidades (L693)  se llama cada vez que la cabeza llega a una celda: revisa nube, veneno y escudo.
-snake_colision_nube (L705), snake_comer_veneno (L717), snake_activar_escudo (L727).
+Funciones principales:
+  snake_cargar_config (L476)   lee del JSON niveles, orden, nivel inicial, level_up_score, estilo del cuerpo
+                               y entidades, con valores por defecto. Es la unica funcion que lee nombres del JSON.
+  snake_aplicar_nivel (L540)   activa un nivel: mezcla su configuracion con los valores originales, fija
+                               velocidad_gravedad = tick / 1000, reinicia el temporizador de tick, borra lo del
+                               nivel anterior y crea las nubes, venenos y escudo que el nivel activa.
+                               Si el escudo esta activo se conserva (ver seccion 7).
+  snake_saltar_nivel (L588)    teclas 1, 2 y 3; no hace nada si hay un solo nivel.
+  snake_revisar_subida_nivel (L595)  avance automatico: del nivel i al i+1 con LEVEL_UP_SCORE x (i+1) puntos
+                               (con 50: ENTUSIASTA a los 50 puntos y NYAN_CAT a los 100). Tras un salto manual
+                               hace falta ganar puntos nuevos para volver a subir solo.
+  snake_actualizar_estado (L606)  MANEJADOR DE ESTADOS, en cada vuelta del game_loop:
+                               NORMAL -> INVULNERABLE al comer el escudo; INVULNERABLE -> NORMAL cuando termina
+                               el tiempo; cualquiera -> GAME_OVER si el juego termino. Tambien hace reaparecer
+                               la fruta de escudo y revisa el avance de nivel.
+  snake_es_invulnerable (L621), snake_segundos_restantes (L625), snake_duracion_escudo (L631),
+  snake_game_over (L640).
+  snake_ocupada_extra (L647), snake_celda_libre (L652), snake_generar_nubes (L675), snake_reponer_venenos (L682),
+  snake_generar_escudo (L690): aparicion en celdas libres. Una celda libre no tiene serpiente, comida ni otra
+  entidad; las nubes ademas aparecen a mas de 3 celdas de la cabeza, para que ninguna caiga encima de la
+  serpiente al empezar el nivel.
+  snake_procesar_entidades (L700)  se llama cada vez que la cabeza llega a una celda: revisa nube, veneno y escudo.
+  snake_colision_nube (L712), snake_comer_veneno (L724), snake_activar_escudo (L734).
 
-Logica de colision con nubes (snake_colision_nube):
-  - Con invulnerabilidad: se ignora (no pierde puntos ni vida).
-  - Con puntaje mayor que 0: el puntaje pasa a 0 y la serpiente sigue viva.
-  - Con puntaje 0: GAME OVER inmediato.
-  Las nubes son fijas y se crean al entrar al nivel que las activa.
+-------------------------------------------------------------
+7. LOGICA CLAVE PARA SUSTENTAR
+-------------------------------------------------------------
+7.1 Colision con nubes (snake_colision_nube, L712)
+  Las nubes son entidades fijas: se crean al entrar al nivel que las activa y no se mueven.
+  Cuando la cabeza llega a una celda con nube:
+    - Si el escudo esta activo: se ignora (no pierde puntos ni vida).
+    - Si el puntaje es mayor que 0: el puntaje pasa a 0 y la serpiente SIGUE VIVA.
+    - Si el puntaje ya es 0: GAME OVER inmediato.
+  Se comprueba solo con la cabeza (el cuerpo no cuenta). Esto sigue literalmente el enunciado: "si hay
+  colision se pierden todos los puntos pero sigue vivo; si hay colision y no tiene puntos, game over".
 
-Frutas venenosas (snake_comer_veneno): POISON SUBTRACT resta PENALTY sin bajar de 0; POISON KILL termina el
-  juego; con invulnerabilidad no tienen efecto. La fruta comida se repone para mantener COUNT.
+7.2 Frutas venenosas (snake_comer_veneno, L724)
+  POISON: SUBTRACT resta PENALTY puntos sin bajar de 0; POISON: KILL termina el juego (el enunciado pide
+  "restar puntos o terminar el juego segun el nivel"). Con escudo activo no tienen efecto. La fruta comida
+  se repone para mantener la cantidad COUNT.
 
-Manejo del tiempo del power-up (snake_activar_escudo, snake_es_invulnerable, snake_actualizar_estado):
-  - Al comer la fruta de escudo se guarda invulnerable_hasta = time.time() + DURATION y el estado pasa a INVULNERABLE.
-  - El estado vuelve a NORMAL cuando time.time() >= invulnerable_hasta. Se usa tiempo real, no ticks: el
-    escudo dura los mismos segundos en Baby, Entusiasta y Nyan Cat.
+7.3 Manejo del tiempo del power-up "No Morir" (snake_activar_escudo L734, snake_es_invulnerable L621,
+    snake_actualizar_estado L606)
+  - Al comer la fruta de escudo se guarda la HORA DE FIN: invulnerable_hasta = time.time() + DURATION, y el
+    estado pasa de NORMAL a INVULNERABLE.
+  - En cada vuelta del game_loop el manejador de estados compara time.time() con invulnerable_hasta; cuando
+    la supera, el estado vuelve a NORMAL.
+  - Se usa tiempo real y no un contador de ticks, a proposito: el tick cambia de un nivel a otro (150, 100 y
+    75 ms), y asi el escudo dura los mismos n segundos en los tres niveles.
   - DURATION sale de SHIELD_FRUIT, o de SHIELD_DURATION si el nivel lo escribe.
   - La fruta de escudo reaparece 6 segundos despues de que termina el efecto.
+  - Si se cambia de nivel con el escudo activo (por ejemplo al subir solo de ENTUSIASTA a NYAN_CAT), el
+    escudo conserva su tiempo restante: el jugador no pierde la invulnerabilidad que acaba de ganar.
+  - Mientras dura, la serpiente parpadea en blanco y el panel lateral muestra la cuenta regresiva.
 
-Reglas de la invulnerabilidad: ignora nubes, frutas venenosas y el choque con el propio cuerpo; las paredes
-  siguen matando.
+7.4 Reglas de la invulnerabilidad (decision de diseno)
+  Ignora nubes, frutas venenosas y el choque con el propio cuerpo. Las paredes SIGUEN matando: si no, el
+  jugador podria salirse del tablero.
 
--------------------------------------------------------------
-6. runtime.py - codigo nuevo: dibujo y efectos visuales (L736-901)
--------------------------------------------------------------
-El bloque solo lee el estado (serpiente, nubes, venenos, escudo, nivel, estado); no cambia variables del juego.
-  snake_dibujar_todo (L755)          dibuja comida, nubes, venenos, escudo, serpiente y actualiza el panel.
-  snake_dibujar_serpiente (L770)     dibuja de la cola a la cabeza. Con TAIL RAINBOW el color del segmento i es
-                                     SNAKE_COLORES_ARCOIRIS[(i + fase) % 6]. Con HEAD CAT usa la cabeza de gato.
-                                     Parpadea en blanco mientras es invulnerable.
-  snake_dibujar_forma (L810)         firma (x, y, forma, color, direccion): RECTANGLE usa dibujar_celda (el original),
-                                     CIRCULAR usa create_oval, TRIANGULAR usa create_polygon con la punta hacia
-                                     donde avanza el segmento.
-  snake_dibujar_cabeza_gato (L835)   circulo, 2 orejas triangulares, 2 ojos con pupila, nariz y bigotes.
-  snake_dibujar_nube (L857)          3 ovalos solapados.
-  snake_dibujar_veneno (L866)        circulo morado con calavera.
-  snake_dibujar_escudo (L878)        estrella dorada de 5 puntas.
-  snake_actualizar_panel (L892)      panel lateral: "NIVEL <nombre>" y "ESCUDO n.n s" (cuenta regresiva).
-  _esc (L750)                        escala las medidas del dibujo con el tamano de celda.
-  Sin "levels" (o con un solo nivel) la serpiente se dibuja con los colores originales (cabeza #00FF00,
-  cuerpo #33CC33) y no se crea el panel de niveles.
+7.5 Manejador de estados
+  Tres estados: NORMAL, INVULNERABLE y GAME_OVER (variable estado_snake). Las transiciones estan solo en
+  snake_activar_escudo (NORMAL -> INVULNERABLE), snake_actualizar_estado (INVULNERABLE -> NORMAL y
+  cualquiera -> GAME_OVER) y snake_game_over.
+
+7.6 Decisiones tomadas donde el enunciado no es explicito
+  - NYAN_CAT hereda las frutas venenosas y el escudo de ENTUSIASTA (los niveles son acumulativos). Se activa
+    en el .brick con POISON y SHIELD; si no se quiere, basta quitar esas dos lineas del nivel.
+  - Las entidades solo aparecen en celdas libres; nunca sobre la serpiente ni sobre otra entidad.
+  - Cambio de nivel: nivel inicial (DEFAULT_LEVEL), avance automatico por puntaje (LEVEL_UP_SCORE) y teclas
+    1, 2 y 3 para saltar de nivel (pensado para mostrar los tres niveles en el video).
 
 -------------------------------------------------------------
-7. gramaticas bnf\snake_evolved.bnf (archivo nuevo)
+8. RETROCOMPATIBILIDAD: COMO SE GARANTIZA
 -------------------------------------------------------------
-Gramatica de snake.bnf mas: las cuatro figuras especiales con FORM, COLOR, PENALTY, COUNT y DURATION; el
-bloque DEFINE LEVELS con DEFAULT_LEVEL, LEVEL_UP_SCORE y LEVEL con TICK, POISON, SHIELD, CLOUDS, HEAD, TAIL
-y SHIELD_DURATION. Todo es opcional. Las reglas que valida el compilador (valores mayores que cero, BABY por
-defecto, etc.) estan anotadas como comentarios al final de la parte nueva.
+  1. Compilador: todo atributo y bloque nuevo es opcional. Sin DEFINE LEVELS, completar_snake() escribe solo
+     el nivel BABY con los valores del Snake original (tick 150, sin veneno, nubes ni escudo).
+  2. Runtime: si el JSON no trae "levels" (un .json antiguo), snake_cargar_config() usa el mismo nivel BABY por
+     defecto. Con un solo nivel no hay panel de niveles ni teclas 1-3: el juego se ve igual que el original.
+  3. Dibujo: sin FORM ni niveles se dibuja el rectangulo con los colores originales (cabeza #00FF00, cuerpo
+     #33CC33) y la comida roja de siempre.
+  4. Tetris: el unico cambio que lo toca es el paso del bucle, que sigue siendo 50 ms para Tetris.
+Comprobado comparando los JSON del compilador anterior y del nuevo:
+  tetris.brick y tetris_remake.brick  -> JSON identico al de antes.
+  snake.brick                         -> el mismo JSON mas las claves default_level, level_order y levels
+                                         (solo el nivel BABY con los valores originales).
 
 -------------------------------------------------------------
-8. jugar.bat
+9. OTROS ARCHIVOS
 -------------------------------------------------------------
-Sin cambios: compila games\<nombre>.brick y ejecuta runtime.py con games\<nombre>.json, asi que
-"jugar snake_evolved" funciona con el .brick dentro de games\.
+gramaticas bnf\snake_evolved.bnf (archivo nuevo)
+  Gramatica de snake.bnf mas: las cuatro figuras especiales con FORM, COLOR, PENALTY, COUNT y DURATION; el
+  bloque DEFINE LEVELS con DEFAULT_LEVEL, LEVEL_UP_SCORE y LEVEL con TICK, POISON, SHIELD, CLOUDS, HEAD, TAIL
+  y SHIELD_DURATION. Todo es opcional. Las reglas que valida el compilador (valores mayores que cero, BABY por
+  defecto, etc.) estan anotadas como comentarios al final de la parte nueva.
+jugar.bat
+  Sin cambios: compila games\<nombre>.brick y ejecuta runtime.py con games\<nombre>.json, asi que
+  "jugar snake_evolved" funciona con el .brick dentro de games\.
 
 -------------------------------------------------------------
-9. APORTE DE CADA INTEGRANTE  (BORRADOR: cada uno debe revisarlo y reescribirlo con sus palabras)
+10. CASOS DE PRUEBA (que se comprueba y que se espera)
+-------------------------------------------------------------
+  Retrocompatibilidad
+  T1   jugar snake                     compila y corre en nivel BABY, igual que antes
+  T2   jugar tetris                    compila y corre sin errores
+  T3   jugar tetris_remake             compila y corre sin errores
+  T16  .brick sin bloque LEVELS        se asigna BABY por defecto, sin error
+  Dibujo
+  T4   FORM: CIRCULAR                  los segmentos se dibujan como circulos
+  T5   FORM: TRIANGULAR                los segmentos se dibujan como triangulos (apuntan hacia donde avanzan)
+  T13  NYAN_CAT con cola larga         colores de la cola se repiten por modulo; cabeza de gato circular
+  Niveles y mecanicas
+  T6   nivel BABY                      sin venenosas, nubes ni escudo; tick 150 ms
+  T7   ENTUSIASTA, fruta venenosa      resta PENALTY puntos y nunca baja de 0
+  T8   ENTUSIASTA, fruta de escudo     invulnerable DURATION segundos; el panel cuenta hacia atras
+  T9   fin del escudo                  vuelve a ser vulnerable a los n segundos
+  T10  NYAN_CAT, nube con puntos       puntaje a 0 y la serpiente sigue viva
+  T11  NYAN_CAT, nube con 0 puntos     game over inmediato
+  T12  NYAN_CAT, escudo activo y nube  no pierde puntos ni vida
+  T14  velocidad por nivel             NYAN_CAT (75 ms) mas rapido que ENTUSIASTA (100 ms) y que BABY (150 ms)
+  T17  aparicion de nubes y frutas     nunca caen sobre la serpiente ni sobre otra entidad
+  Errores del compilador (deben mostrar la linea del .brick)
+  T15  nivel desconocido, TICK negativo o cero, FORM invalida, PENALTY en CLOUD, DEFINE LEVELS sin END
+       -> la compilacion se detiene con un mensaje que indica la linea
+
+-------------------------------------------------------------
+11. PREGUNTAS PROBABLES EN LA SUSTENTACION
+-------------------------------------------------------------
+  - Por que el escudo usa time.time() y no ticks?
+    Porque el tick cambia entre niveles; con tiempo real el escudo dura los mismos segundos en los tres.
+  - Por que las paredes matan aunque el jugador sea invulnerable?
+    Para que no pueda salirse del tablero; la invulnerabilidad cubre solo nubes, venenos y el propio cuerpo.
+  - Que pasa si el .brick no tiene LEVELS?
+    El compilador escribe solo BABY con los valores del Snake original y el juego corre como siempre.
+  - Por que TICK debe ser multiplo de 25?
+    Porque el bucle del motor avanza de 25 en 25 ms; si no lo es, se redondea hacia arriba y el compilador avisa.
+  - Que errores detecta el compilador y cuales el runtime?
+    El compilador detecta los de sintaxis y los valores invalidos (nivel desconocido, TICK <= 0, FORM invalida).
+    Un error de logica (por ejemplo un PENALTY demasiado alto) no lo detecta: compila bien pero se juega mal.
+  - Donde se lee el JSON en el runtime?
+    Solo en snake_cargar_config; si cambia un nombre en el contrato, se ajusta una sola funcion.
+  - Como se logra la cola multicolor?
+    Con una lista de 6 colores hexadecimales y color del segmento i = COLORES[(i + fase) % 6]; la "fase"
+    cambia con el tiempo para que los colores parezcan moverse.
+  - Que se cambio del codigo original y que se agrego?
+    Se cambiaron 20 lineas del runtime y 14 del compilador (secciones 4 y 5); el resto es codigo nuevo con "# ACT4:".
+
+-------------------------------------------------------------
+12. APORTE DE CADA INTEGRANTE
 -------------------------------------------------------------
 Laura Cardona (gramatica y compilador): escribio snake_evolved.bnf (FORM, LEVELS, LEVEL, POISON, SHIELD,
 CLOUDS, HEAD, TAIL, DURATION, PENALTY y COUNT, todas opcionales) y extendio compiler.py: lexer con numero de
-linea (L51-70), lectura y validacion de las figuras especiales (L180-253) y del bloque DEFINE LEVELS
-(L255-343), nivel BABY por defecto cuando no hay LEVELS (L345-371), constantes (L28-49), ayudas de error
-(L127-166) y errores con numero de linea (L119, L123). Archivos: compiler.py y snake_evolved.bnf.
+linea (L54-80), lectura y validacion de las figuras especiales (L190-263) y del bloque DEFINE LEVELS
+(L265-354), nivel BABY por defecto cuando no hay LEVELS (L355-382), constantes (L29-50), ayudas de error
+(L137-175) y errores con numero de linea (L125-135). Archivos: compiler.py y snake_evolved.bnf.
 
 Geremy Sierra (logica del juego): manejador de estados NORMAL / INVULNERABLE / GAME_OVER, lectura y
 aplicacion de los niveles (cambio de velocidad, teclas 1-3 y avance por puntaje), temporizador del
 power-up con time.time(), colision con nubes, frutas venenosas y aparicion en celdas libres.
-Archivo: runtime.py L27-62 (constantes y ayudas), L79-85, L134-147, L162-174, L201-202, L401-416 y
-L429-439 (cambios en codigo original) y L459-735 (codigo nuevo de logica).
+Archivo: runtime.py L28-67 (constantes y ayudas), L80-86, L135-148, L163-175, L202-203, L403-417 y
+L429-441 (cambios en codigo original) y L460-741 (codigo nuevo de logica).
 
 Maickel Sabas (dibujo y efectos visuales): segmentos circulares y triangulares, cabeza de gato con
 orejas y ojos, cola multicolor con color = COLORES[indice % n], dibujo de nubes, frutas venenosas y escudo,
 parpadeo de la serpiente invulnerable y panel lateral con nivel y cuenta regresiva del escudo.
-Archivo: runtime.py L15 (import math), L136-141 (panel), L236-239 (llamada desde dibujar) y L736-901.
+Archivo: runtime.py L16 (import math), L135-142 (panel), L237-239 (llamada desde dibujar) y L743-908.
 
 Juan Fernando (contenido, integracion y calidad): snake_evolved.brick con los tres niveles, verificacion
-de que jugar.bat ejecuta snake_evolved sin cambios, carpeta pruebas\ con las pruebas T1 a T17 y
+de que jugar.bat ejecuta snake_evolved sin cambios, pruebas de los casos de la seccion 10 y
 consolidacion de este informe, el zip y el video.
