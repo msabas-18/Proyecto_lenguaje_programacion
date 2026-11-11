@@ -1,0 +1,172 @@
+# ================================================================
+# BrickScript - Gramatica de Brick Tanks
+# Entregable 5 - TLP 2026-2S
+#
+# Basada en la organizacion de tetris_remake.bnf y snake_evolved.bnf.
+# Las producciones especificas de TANKS son extensiones del lenguaje.
+#
+# Notacion:
+#   ::=  produccion
+#   |    alternativa
+#   { X } cero o mas repeticiones
+#   [ X ] elemento opcional
+#   epsilon = ausencia de elemento
+# ================================================================
+
+<programa> ::= "GAME_TYPE" "TANKS" <grid> <definiciones> <eventos>
+
+<grid> ::= "GAME_GRID" "(" <entero_positivo> "," <entero_positivo> ")"
+
+# ------------------------- DEFINICIONES -------------------------
+
+<definiciones> ::= { <definicion> }
+
+<definicion> ::= <definicion_tanque>
+               | <definicion_bullet>
+               | <definicion_powerup>
+               | <definicion_wall>
+
+<definicion_tanque> ::= "DEFINE" "TANK" <identificador> ":" <atributos_tanque> "END"
+<atributos_tanque> ::= <atributo_tanque> { <atributo_tanque> }
+
+<atributo_tanque> ::= <attr_type> | <attr_color> | <attr_hp>
+                    | <attr_speed> | <attr_damage> | <attr_fire_rate>
+                    | <attr_form> | <attr_target> | <attr_ai>
+                    | <attr_points> | <estado>
+
+<attr_type> ::= "TYPE" ":" <tipo_tanque>
+<tipo_tanque> ::= "PLAYER" | "ENEMY" | "BOSS"
+<attr_color> ::= "COLOR" ":" <color_hex>
+<attr_hp> ::= "HP" ":" <entero_positivo>
+<attr_speed> ::= "SPEED" ":" <entero_positivo>
+<attr_damage> ::= "DAMAGE" ":" <entero_positivo>
+<attr_fire_rate> ::= "FIRE_RATE" ":" <entero_positivo>
+<attr_form> ::= "FORM" ":" <forma>
+<forma> ::= "RECTANGLE" | "SQUARE" | "CIRCULAR" | "TRIANGULAR"
+<attr_target> ::= "TARGET" ":" <objetivo>
+<objetivo> ::= "PLAYER" | "ENEMIES" | "BOSS"
+<attr_ai> ::= "AI" ":" <tipo_ai>
+<tipo_ai> ::= "AGGRESSIVE" | "PATROL" | "STATIONARY"
+<attr_points> ::= "POINTS" ":" <entero_no_negativo>
+
+<estado> ::= "STATE" <entero_positivo> ":" <matriz>
+<matriz> ::= <fila> { <fila> }
+<fila> ::= "[" <valores_fila> "]"
+<valores_fila> ::= <bit> { "," <bit> }
+<bit> ::= "0" | "1"
+
+# -------------------------- PROYECTILES --------------------------
+
+<definicion_bullet> ::= "DEFINE" "BULLET" <identificador> ":" <atributos_bullet> "END"
+<atributos_bullet> ::= <atributo_bullet> { <atributo_bullet> }
+<atributo_bullet> ::= <attr_bullet_type> | <attr_color> | <attr_damage>
+                    | <attr_speed> | <attr_bullet_size>
+<attr_bullet_type> ::= "TYPE" ":" "BULLET"
+<attr_bullet_size> ::= "SIZE" ":" <entero_positivo>
+
+# --------------------------- POWER-UPS ---------------------------
+
+<definicion_powerup> ::= "DEFINE" "POWERUP" <identificador> ":" <atributos_powerup> "END"
+<atributos_powerup> ::= <atributo_powerup> { <atributo_powerup> }
+<atributo_powerup> ::= <attr_powerup_type> | <attr_color> | <attr_heal>
+                     | <attr_chance> | <estado>
+<attr_powerup_type> ::= "TYPE" ":" "HAMMER"
+<attr_heal> ::= "HEAL" ":" <entero_positivo>
+<attr_chance> ::= "CHANCE" ":" <entero_no_negativo>
+
+# ----------------------------- MUROS -----------------------------
+
+<definicion_wall> ::= "DEFINE" "WALL" <identificador> ":" <atributos_wall> "END"
+<atributos_wall> ::= <atributo_wall> { <atributo_wall> }
+<atributo_wall> ::= <attr_color> | <attr_wall_hp> | <attr_destructible> | <estado>
+<attr_wall_hp> ::= "HP" ":" <entero_positivo>
+<attr_destructible> ::= "DESTRUCTIBLE" ":" <on_off>
+<on_off> ::= "ON" | "OFF"
+
+# ----------------------------- EVENTOS ---------------------------
+
+<eventos> ::= { <evento> }
+<evento> ::= "ON" <nombre_evento> ":" <acciones> "END"
+           | "ON" "TARGET_SCORE" <entero_no_negativo> ":" <acciones> "END"
+
+<nombre_evento> ::= "START" | "TICK"
+                  | "KEY_UP" | "KEY_DOWN" | "KEY_LEFT" | "KEY_RIGHT" | "KEY_SPACE"
+                  | "COLLISION_WALL" | "COLLISION_BULLET_WALL"
+                  | "COLLISION_BULLET_ENEMY" | "COLLISION_BULLET_PLAYER"
+                  | "COLLISION_BULLET_BOSS" | "COLLISION_PLAYER_ENEMY"
+                  | "COLLISION_PLAYER_POWERUP" | "DESTROY_ENEMY"
+                  | "DESTROY_BOSS" | "PLAYER_HIT" | "HAMMER_COLLECTED"
+                  | "GAME_OVER"
+
+<acciones> ::= <accion> { <accion> }
+<accion> ::= <accion_spawn> | <accion_move> | <accion_fire>
+           | <accion_bullet_move> | <accion_rotate> | <accion_damage>
+           | <accion_heal> | <accion_score> | <accion_destroy>
+           | <accion_game_over> | <accion_victory> | <accion_invulnerability>
+
+<accion_spawn> ::= "SPAWN" <entidad> "AT" <coordenadas>
+                 | "SPAWN" "ENEMY" <identificador> "AT" <coordenadas>
+                 | "SPAWN" "ENEMY" "RANDOM"
+                 | "SPAWN" "POWERUP" <identificador> "AT" "RANDOM"
+                 | "SPAWN" "POWERUP" <identificador> "AT" <coordenadas>
+                 | "SPAWN" "BOSS" <identificador> "AT" <coordenadas>
+<entidad> ::= "PLAYER" | "WALL" <identificador>
+
+<accion_move> ::= "MOVE" <entidad_movil> <direccion>
+                | "MOVE" "PLAYER" "FORWARD"
+<entidad_movil> ::= "PLAYER" | "ENEMY" | "BOSS"
+<direccion> ::= "UP" | "DOWN" | "LEFT" | "RIGHT"
+<accion_bullet_move> ::= "MOVE" "BULLETS" "FORWARD"
+
+<accion_fire> ::= "FIRE" <tirador> "USING" <identificador>
+<tirador> ::= "PLAYER" | "ENEMIES" | "BOSS"
+<accion_rotate> ::= "ROTATE" "PLAYER"
+
+<accion_damage> ::= "DAMAGE" <objetivo_danio> "BY" <entero_positivo>
+                  | "DAMAGE" <objetivo_danio> "BY" "BULLET_DAMAGE"
+<objetivo_danio> ::= "PLAYER" | "ENEMY" | "BOSS" | "WALL"
+
+<accion_heal> ::= "HEAL" "PLAYER" "BY" <entero_positivo>
+                | "HEAL" "PLAYER" "BY" "POWERUP_VALUE"
+<accion_score> ::= "INCREASE_SCORE" <entero_positivo>
+                 | "INCREASE_SCORE" "ENEMY_POINTS"
+<accion_destroy> ::= "DESTROY" <objetivo_danio> | "DESTROY" "POWERUP"
+<accion_game_over> ::= "GAME_OVER" | "GAME_OVER" "IF" "PLAYER" "HP_ZERO"
+<accion_victory> ::= "VICTORY"
+<accion_invulnerability> ::= "SET" "PLAYER" "INVULNERABLE" ":" <on_off>
+
+# ------------------------- ELEMENTOS LEXICOS --------------------
+
+<coordenadas> ::= "(" <entero_no_negativo> "," <entero_no_negativo> ")"
+<color_hex> ::= "#" <hex> <hex> <hex> <hex> <hex> <hex>
+<hex> ::= <digito> | "A"..."F" | "a"..."f"
+<identificador> ::= <letra> { <letra> | <digito> | "_" }
+<entero_positivo> ::= <digito_no_cero> { <digito> }
+<entero_no_negativo> ::= <digito> { <digito> }
+<digito> ::= "0" | <digito_no_cero>
+<digito_no_cero> ::= "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"
+<letra> ::= "A"..."Z" | "a"..."z" | "_"
+
+# ------------------------- REGLAS SEMANTICAS --------------------
+# 1. Debe existir exactamente un tanque TYPE: PLAYER.
+# 2. Debe existir al menos una definicion TYPE: ENEMY y una BULLET.
+# 3. Debe existir exactamente una definicion TYPE: BOSS para el jefe final.
+# 4. HP, SPEED, DAMAGE, FIRE_RATE y SIZE deben ser enteros > 0.
+# 5. CHANCE y POINTS deben ser enteros >= 0; al menos un CHANCE > 0
+#    si se desea que el sistema pueda seleccionar un power-up.
+# 6. Los identificadores usados en SPAWN/FIRE deben corresponder a
+#    definiciones existentes y compatibles con el tipo de entidad.
+# 7. TARGET_SCORE debe ser >= 0 y debe existir como maximo un evento
+#    de transicion al jefe, salvo que se defina una prioridad.
+# 8. TARGET_SCORE activa la fase del jefe una sola vez.
+# 9. El jefe acumula el dano recibido hasta que HP <= 0; entonces
+#    se dispara DESTROY_BOSS y puede declararse VICTORY.
+# 10. Un proyectil conserva la direccion de su disparo y avanza
+#     automaticamente; MOVE BULLETS FORWARD expresa ese comportamiento.
+# 11. Los eventos de colision se disparan segun el par de entidades.
+#     Los muros destructibles pierden HP al recibir dano.
+# 12. ENEMY_POINTS consulta los POINTS del enemigo eliminado.
+# 13. GAME_OVER IF PLAYER HP_ZERO termina la partida si el HP actual
+#     del jugador es menor o igual que cero.
+# 14. Los valores por defecto y atributos opcionales deben definirse
+#     en la especificacion semantica del runtime.

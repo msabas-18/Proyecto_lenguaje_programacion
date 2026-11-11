@@ -1,0 +1,242 @@
+# ================================================================
+# BRICK TANKS - Entregable 5
+# Proyecto BrickScript - TLP 2026-2S
+# Equipo 22
+#
+# Definicion de referencia escrita para la gramatica tanks.bnf.
+# Las construcciones nuevas requieren implementacion posterior.
+# ================================================================
+
+GAME_TYPE TANKS
+GAME_GRID (20, 16)
+
+# ------------------------- TANQUE JUGADOR ------------------------
+DEFINE TANK PLAYER_TANK:
+  TYPE: PLAYER
+  COLOR: #20B2AA
+  HP: 100
+  SPEED: 1
+  DAMAGE: 20
+  FIRE_RATE: 1
+  FORM: RECTANGLE
+  STATE 1:
+    [0, 1, 0]
+    [1, 1, 1]
+    [1, 0, 1]
+END
+
+# ---------------------------- ENEMIGOS ---------------------------
+DEFINE TANK SCOUT_TANK:
+  TYPE: ENEMY
+  COLOR: #E74C3C
+  HP: 30
+  SPEED: 2
+  DAMAGE: 10
+  FIRE_RATE: 3
+  FORM: RECTANGLE
+  TARGET: PLAYER
+  AI: AGGRESSIVE
+  POINTS: 100
+  STATE 1:
+    [0, 1, 0]
+    [1, 1, 1]
+    [1, 0, 1]
+END
+
+DEFINE TANK RAPID_TANK:
+  TYPE: ENEMY
+  COLOR: #F39C12
+  HP: 20
+  SPEED: 3
+  DAMAGE: 8
+  FIRE_RATE: 2
+  FORM: TRIANGULAR
+  TARGET: PLAYER
+  AI: AGGRESSIVE
+  POINTS: 150
+  STATE 1:
+    [0, 1, 0]
+    [1, 1, 1]
+    [0, 1, 0]
+END
+
+DEFINE TANK HEAVY_TANK:
+  TYPE: ENEMY
+  COLOR: #8E44AD
+  HP: 60
+  SPEED: 1
+  DAMAGE: 15
+  FIRE_RATE: 4
+  FORM: SQUARE
+  TARGET: PLAYER
+  AI: AGGRESSIVE
+  POINTS: 250
+  STATE 1:
+    [1, 1, 1]
+    [1, 1, 1]
+    [1, 1, 1]
+END
+
+# -------------------------- PROYECTILES --------------------------
+DEFINE BULLET PLAYER_BULLET:
+  TYPE: BULLET
+  COLOR: #FFFF00
+  DAMAGE: 20
+  SPEED: 3
+  SIZE: 1
+END
+
+DEFINE BULLET ENEMY_BULLET:
+  TYPE: BULLET
+  COLOR: #FF6347
+  DAMAGE: 10
+  SPEED: 2
+  SIZE: 1
+END
+
+DEFINE BULLET BOSS_BULLET:
+  TYPE: BULLET
+  COLOR: #FF00FF
+  DAMAGE: 25
+  SPEED: 2
+  SIZE: 2
+END
+
+# ------------------------------ MUROS ----------------------------
+DEFINE WALL BRICK_WALL:
+  COLOR: #B5651D
+  HP: 40
+  DESTRUCTIBLE: ON
+  STATE 1:
+    [1]
+END
+
+DEFINE WALL STEEL_WALL:
+  COLOR: #808080
+  HP: 999
+  DESTRUCTIBLE: OFF
+  STATE 1:
+    [1]
+END
+
+# ---------------------------- POWER-UP ---------------------------
+DEFINE POWERUP REPAIR_HAMMER:
+  TYPE: HAMMER
+  COLOR: #FFD700
+  HEAL: 25
+  CHANCE: 1
+  STATE 1:
+    [1, 1]
+    [0, 1]
+END
+
+# ---------------------------- JEFE FINAL -------------------------
+DEFINE TANK FINAL_BOSS:
+  TYPE: BOSS
+  COLOR: #7D3C98
+  HP: 300
+  SPEED: 1
+  DAMAGE: 25
+  FIRE_RATE: 2
+  FORM: SQUARE
+  TARGET: PLAYER
+  AI: AGGRESSIVE
+  POINTS: 1000
+  STATE 1:
+    [1, 1, 1, 1, 1]
+    [1, 1, 1, 1, 1]
+    [0, 1, 1, 1, 0]
+    [0, 1, 0, 1, 0]
+END
+
+# ------------------------ INICIO Y ESCENARIO ---------------------
+ON START:
+  SPAWN PLAYER AT (10, 14)
+  SPAWN ENEMY SCOUT_TANK AT (4, 3)
+  SPAWN ENEMY RAPID_TANK AT (10, 2)
+  SPAWN ENEMY HEAVY_TANK AT (16, 3)
+  SPAWN POWERUP REPAIR_HAMMER AT RANDOM
+
+  # Obstaculos de ejemplo distribuidos en la arena.
+  SPAWN WALL BRICK_WALL AT (5, 7)
+  SPAWN WALL BRICK_WALL AT (6, 7)
+  SPAWN WALL BRICK_WALL AT (13, 7)
+  SPAWN WALL BRICK_WALL AT (14, 7)
+  SPAWN WALL STEEL_WALL AT (9, 5)
+  SPAWN WALL STEEL_WALL AT (10, 5)
+END
+
+# --------------------------- CICLO PRINCIPAL ---------------------
+ON TICK:
+  MOVE PLAYER FORWARD
+  MOVE BULLETS FORWARD
+  FIRE ENEMIES USING ENEMY_BULLET
+  FIRE BOSS USING BOSS_BULLET
+END
+
+# ------------------------------ CONTROLES ------------------------
+ON KEY_UP:
+  MOVE PLAYER UP
+END
+ON KEY_DOWN:
+  MOVE PLAYER DOWN
+END
+ON KEY_LEFT:
+  MOVE PLAYER LEFT
+END
+ON KEY_RIGHT:
+  MOVE PLAYER RIGHT
+END
+ON KEY_SPACE:
+  FIRE PLAYER USING PLAYER_BULLET
+END
+
+# ------------------------- COLISIONES ----------------------------
+ON COLLISION_BULLET_WALL:
+  DAMAGE WALL BY BULLET_DAMAGE
+END
+
+ON COLLISION_BULLET_ENEMY:
+  DAMAGE ENEMY BY BULLET_DAMAGE
+END
+
+ON COLLISION_BULLET_PLAYER:
+  DAMAGE PLAYER BY BULLET_DAMAGE
+END
+
+ON COLLISION_PLAYER_ENEMY:
+  DAMAGE PLAYER BY 10
+END
+
+ON COLLISION_PLAYER_POWERUP:
+  HEAL PLAYER BY POWERUP_VALUE
+  DESTROY POWERUP
+END
+
+ON HAMMER_COLLECTED:
+  INCREASE_SCORE 50
+END
+
+ON DESTROY_ENEMY:
+  INCREASE_SCORE ENEMY_POINTS
+  SPAWN ENEMY RANDOM
+END
+
+# ---------------------- TRANSICION AL JEFE FINAL -----------------
+ON TARGET_SCORE 1000:
+  SPAWN BOSS FINAL_BOSS AT (10, 2)
+END
+
+ON COLLISION_BULLET_BOSS:
+  DAMAGE BOSS BY BULLET_DAMAGE
+END
+
+ON DESTROY_BOSS:
+  INCREASE_SCORE 1000
+  VICTORY
+END
+
+# ------------------------------ DERROTA --------------------------
+ON PLAYER_HIT:
+  GAME_OVER IF PLAYER HP_ZERO
+END

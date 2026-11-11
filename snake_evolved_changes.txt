@@ -267,55 +267,7 @@ jugar.bat
   "jugar snake_evolved" funciona con el .brick dentro de games\.
 
 -------------------------------------------------------------
-10. CASOS DE PRUEBA (que se comprueba y que se espera)
--------------------------------------------------------------
-  Retrocompatibilidad
-  T1   jugar snake                     compila y corre en nivel BABY, igual que antes
-  T2   jugar tetris                    compila y corre sin errores
-  T3   jugar tetris_remake             compila y corre sin errores
-  T16  .brick sin bloque LEVELS        se asigna BABY por defecto, sin error
-  Dibujo
-  T4   FORM: CIRCULAR                  los segmentos se dibujan como circulos
-  T5   FORM: TRIANGULAR                los segmentos se dibujan como triangulos (apuntan hacia donde avanzan)
-  T13  NYAN_CAT con cola larga         colores de la cola se repiten por modulo; cabeza de gato circular
-  Niveles y mecanicas
-  T6   nivel BABY                      sin venenosas, nubes ni escudo; tick 150 ms
-  T7   ENTUSIASTA, fruta venenosa      resta PENALTY puntos y nunca baja de 0
-  T8   ENTUSIASTA, fruta de escudo     invulnerable DURATION segundos; el panel cuenta hacia atras
-  T9   fin del escudo                  vuelve a ser vulnerable a los n segundos
-  T10  NYAN_CAT, nube con puntos       puntaje a 0 y la serpiente sigue viva
-  T11  NYAN_CAT, nube con 0 puntos     game over inmediato
-  T12  NYAN_CAT, escudo activo y nube  no pierde puntos ni vida
-  T14  velocidad por nivel             NYAN_CAT (75 ms) mas rapido que ENTUSIASTA (100 ms) y que BABY (150 ms)
-  T17  aparicion de nubes y frutas     nunca caen sobre la serpiente ni sobre otra entidad
-  Errores del compilador (deben mostrar la linea del .brick)
-  T15  nivel desconocido, TICK negativo o cero, FORM invalida, PENALTY en CLOUD, DEFINE LEVELS sin END
-       -> la compilacion se detiene con un mensaje que indica la linea
-
--------------------------------------------------------------
-11. PREGUNTAS PROBABLES EN LA SUSTENTACION
--------------------------------------------------------------
-  - Por que el escudo usa time.time() y no ticks?
-    Porque el tick cambia entre niveles; con tiempo real el escudo dura los mismos segundos en los tres.
-  - Por que las paredes matan aunque el jugador sea invulnerable?
-    Para que no pueda salirse del tablero; la invulnerabilidad cubre solo nubes, venenos y el propio cuerpo.
-  - Que pasa si el .brick no tiene LEVELS?
-    El compilador escribe solo BABY con los valores del Snake original y el juego corre como siempre.
-  - Por que TICK debe ser multiplo de 25?
-    Porque el bucle del motor avanza de 25 en 25 ms; si no lo es, se redondea hacia arriba y el compilador avisa.
-  - Que errores detecta el compilador y cuales el runtime?
-    El compilador detecta los de sintaxis y los valores invalidos (nivel desconocido, TICK <= 0, FORM invalida).
-    Un error de logica (por ejemplo un PENALTY demasiado alto) no lo detecta: compila bien pero se juega mal.
-  - Donde se lee el JSON en el runtime?
-    Solo en snake_cargar_config; si cambia un nombre en el contrato, se ajusta una sola funcion.
-  - Como se logra la cola multicolor?
-    Con una lista de 6 colores hexadecimales y color del segmento i = COLORES[(i + fase) % 6]; la "fase"
-    cambia con el tiempo para que los colores parezcan moverse.
-  - Que se cambio del codigo original y que se agrego?
-    Se cambiaron 20 lineas del runtime y 14 del compilador (secciones 4 y 5); el resto es codigo nuevo con "# ACT4:".
-
--------------------------------------------------------------
-12. APORTE DE CADA INTEGRANTE
+10. APORTE DE CADA INTEGRANTE
 -------------------------------------------------------------
 Laura Cardona (gramatica y compilador): escribio snake_evolved.bnf (FORM, LEVELS, LEVEL, POISON, SHIELD,
 CLOUDS, HEAD, TAIL, DURATION, PENALTY y COUNT, todas opcionales) y extendio compiler.py: lexer con numero de
