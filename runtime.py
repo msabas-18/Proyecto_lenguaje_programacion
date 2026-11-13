@@ -140,6 +140,22 @@ class Juego:
                 self.label_nivel.pack(pady=10, padx=10)
                 self.label_escudo = tk.Label(self.marco_score, text="", bg='#222222', fg='#FFD700', font=('Consolas', 12, 'bold'))
                 self.label_escudo.pack(pady=10, padx=10)
+        # ACT5: Configuracion inicial de Brick Tanks
+        if self.tipo_juego == 'TANKS':
+            self.tanks_cargar_config()
+            self.label_controles.config(
+                text="CONTROLES\nFlechas: Mover\nEspacio: Disparar"
+            )
+            self.label_hp = tk.Label(
+                self.marco_score, text="VIDA (HP)\n100",
+                bg='#222222', fg='#00FF00', font=('Consolas', 12, 'bold')
+            )
+            self.label_hp.pack(pady=10, padx=10)
+            self.label_estado_tanks = tk.Label(
+                self.marco_score, text="",
+                bg='#222222', fg='#FFD700', font=('Consolas', 11, 'bold')
+            )
+            self.label_estado_tanks.pack(pady=10, padx=10)
         
         self.timer_gravedad = 0
         self.ejecutar_evento('ON_START')
@@ -168,6 +184,11 @@ class Juego:
         # ACT4: manejador de estados (vence el escudo, reaparece la fruta, sube de nivel)
         if self.tipo_juego == 'SNAKE':
             self.snake_actualizar_estado()
+
+        # ACT5: Gancho de estado continuo para Tanks (combate / Boss)
+        if self.tipo_juego == 'TANKS' and hasattr(self, 'tanks_actualizar_estado'):
+            self.tanks_actualizar_estado()
+
 
         self.dibujar()
 
@@ -201,6 +222,17 @@ class Juego:
             elif key == 'RIGHT': self.snake_cambiar_direccion('RIGHT')
             # ACT4: teclas 1, 2 y 3 saltan de nivel (util para la demo)
             elif key in ('1', '2', '3'): self.snake_saltar_nivel(int(key) - 1)
+        elif self.tipo_juego == 'TANKS':
+            if key == 'UP':
+                self.ejecutar_evento('ON_KEY_UP')
+            elif key == 'DOWN':
+                self.ejecutar_evento('ON_KEY_DOWN')
+            elif key == 'LEFT':
+                self.ejecutar_evento('ON_KEY_LEFT')
+            elif key == 'RIGHT':
+                self.ejecutar_evento('ON_KEY_RIGHT')
+            elif key == 'SPACE':
+                self.ejecutar_evento('ON_KEY_SPACE')
 
 
     def dibujar(self):
@@ -237,6 +269,9 @@ class Juego:
         # ACT4: todo el dibujo de Snake paso a snake_dibujar_todo() (bloque DIBUJO, mas abajo)
         if self.tipo_juego == 'SNAKE':
             self.snake_dibujar_todo()
+        # ACT5: Dibujo de Brick Tanks
+        if self.tipo_juego == 'TANKS':
+            self.tanks_dibujar_todo()
 
     def dibujar_celda(self, x, y, color):
         ts = self.taman_celda # Alias para taman de celda
@@ -263,6 +298,9 @@ class Juego:
                     if verbo == 'SPAWN' and objeto == 'FOOD': self.snake_spawn_comida()
                     if verbo == 'MOVE' and objeto == 'PLAYER': self.snake_mover_jugador()
                     if verbo == 'GROW': self.snake_crecer()
+
+                if self.tipo_juego == 'TANKS':
+                    self.tanks_ejecutar_accion(accion)
 
 
     # METODOS DE LOGICA DE JUEGO (MANTENIDOS DEL ARCHIVO ORIGINAL)
@@ -907,6 +945,455 @@ class Juego:
         else:
             self.label_escudo.config(text="")
 
+    # =====================================================================
+    # ACT5: (Brick Tanks) - RUNTIME Y MECANICAS PRINCIPALES [Maickel Sabas]
+    # =====================================================================
+
+    def tanks_cargar_config(self):
+        self.velocidad_gravedad = 0.15
+        self.tanks_dirs = {
+            'UP': (0, -1),
+            'DOWN': (0, 1),
+            'LEFT': (-1, 0),
+            'RIGHT': (1, 0)
+        }
+
+        self.defs_tanks = self.datos_juego.get('tanks', {})
+        self.defs_bullets = self.datos_juego.get('bullets', {})
+        self.defs_walls = self.datos_juego.get('walls', {})
+        self.defs_powerups = self.datos_juego.get('powerups', {})
+
+        # Respaldo con valores de tanks.brick por si se prueba antes de integrar el compilador
+        if not self.defs_tanks:
+            self.defs_tanks = {
+                'PLAYER_TANK': {'type': 'PLAYER', 'color': '#20B2AA', 'hp': 100, 'speed': 1, 'damage': 20, 'fire_rate': 1, 'form': 'RECTANGLE'},
+                'SCOUT_TANK':  {'type': 'ENEMY',  'color': '#E74C3C', 'hp': 30,  'speed': 2, 'damage': 10, 'fire_rate': 3, 'form': 'RECTANGLE', 'points': 100},
+                'RAPID_TANK':  {'type': 'ENEMY',  'color': '#F39C12', 'hp': 20,  'speed': 3, 'damage': 8,  'fire_rate': 2, 'form': 'TRIANGULAR', 'points': 150},
+                'HEAVY_TANK':  {'type': 'ENEMY',  'color': '#8E44AD', 'hp': 60,  'speed': 1, 'damage': 15, 'fire_rate': 4, 'form': 'SQUARE', 'points': 250},
+                'FINAL_BOSS':  {'type': 'BOSS',   'color': '#7D3C98', 'hp': 300, 'speed': 1, 'damage': 25, 'fire_rate': 2, 'form': 'SQUARE', 'points': 1000}
+            }
+        if not self.defs_bullets:
+            self.defs_bullets = {
+                'PLAYER_BULLET': {'color': '#FFFF00', 'damage': 20, 'speed': 3, 'size': 1},
+                'ENEMY_BULLET':  {'color': '#FF6347', 'damage': 10, 'speed': 2, 'size': 1},
+                'BOSS_BULLET':   {'color': '#FF00FF', 'damage': 25, 'speed': 2, 'size': 2}
+            }
+        if not self.defs_walls:
+            self.defs_walls = {
+                'BRICK_WALL': {'color': '#B5651D', 'hp': 40,  'destructible': True},
+                'STEEL_WALL': {'color': '#808080', 'hp': 999, 'destructible': False}
+            }
+
+        self.tank_jugador = None
+        self.tanks_enemigos = []
+        self.tanks_boss = None
+        self.tanks_muros = {}
+        self.tanks_balas = []
+        self.tanks_powerups = []
+        self.tanks_player_moving = False
+        self.tanks_boss_spawned = False
+        self.tanks_victoria = False
+
+    def tanks_ejecutar_accion(self, accion):
+        verbo = accion.get('accion')
+        objeto = accion.get('objeto')
+        params = accion.get('params', [])
+
+        if verbo == 'SPAWN':
+            coords = self._tanks_extraer_coords(params)
+            if objeto == 'PLAYER':
+                self.tanks_spawn_jugador(coords)
+            elif objeto == 'ENEMY' or (objeto and objeto.startswith('ENEMY')):
+                nombre_def = params[0] if params and isinstance(params[0], basestring) and params[0] != 'RANDOM' else 'SCOUT_TANK'
+                if nombre_def not in self.defs_tanks:
+                    enemigos_disp = [k for k, v in self.defs_tanks.items() if v.get('type') == 'ENEMY']
+                    nombre_def = random.choice(enemigos_disp) if enemigos_disp else 'SCOUT_TANK'
+                self.tanks_spawn_enemigo(nombre_def, coords)
+            elif objeto == 'WALL' or (objeto and objeto.startswith('WALL')):
+                nombre_muro = params[0] if params and isinstance(params[0], basestring) else 'BRICK_WALL'
+                self.tanks_spawn_muro(nombre_muro, coords)
+            elif objeto == 'POWERUP' or (objeto and objeto.startswith('POWERUP')):
+                nombre_pu = params[0] if params and isinstance(params[0], basestring) else 'REPAIR_HAMMER'
+                self.tanks_spawn_powerup(nombre_pu, coords)
+            elif objeto == 'BOSS' or (objeto and objeto.startswith('BOSS')):
+                nombre_boss = params[0] if params and isinstance(params[0], basestring) else 'FINAL_BOSS'
+                self.tanks_spawn_boss(nombre_boss, coords)
+
+        elif verbo == 'MOVE':
+            if objeto == 'PLAYER':
+                direccion = params[0] if params else 'FORWARD'
+                if direccion == 'FORWARD':
+                    if self.tanks_player_moving and self.tank_jugador:
+                        self.tanks_mover_tanque(self.tank_jugador, self.tank_jugador['dir'])
+                        self.tanks_player_moving = False
+                elif direccion in self.tanks_dirs and self.tank_jugador:
+                    self.tanks_mover_tanque(self.tank_jugador, direccion)
+            elif objeto == 'BULLETS':
+                self.tanks_mover_balas()
+
+        elif verbo == 'FIRE':
+            tipo_bala = params[-1] if params else None
+            if objeto == 'PLAYER' and self.tank_jugador:
+                self.tanks_disparar(self.tank_jugador, tipo_bala or 'PLAYER_BULLET')
+            elif objeto == 'ENEMIES':
+                self.tanks_actualizar_enemigos(tipo_bala or 'ENEMY_BULLET')
+            elif objeto == 'BOSS' and self.tanks_boss:
+                self.tanks_actualizar_boss(tipo_bala or 'BOSS_BULLET')
+
+    def _tanks_extraer_coords(self, params):
+        for p in params:
+            if isinstance(p, (list, tuple)) and len(p) == 2:
+                return (int(p[0]), int(p[1]))
+        return None
+
+    def tanks_spawn_jugador(self, coords=None):
+        cfg = self.defs_tanks.get('PLAYER_TANK', {})
+        x, y = coords if coords else (self.ancho // 2, self.alto - 2)
+        self.tank_jugador = {
+            'id': 'PLAYER',
+            'type': 'PLAYER',
+            'x': x,
+            'y': y,
+            'dir': 'UP',
+            'color': cfg.get('color', '#20B2AA'),
+            'hp': int(cfg.get('hp', 100)),
+            'max_hp': int(cfg.get('hp', 100)),
+            'speed': int(cfg.get('speed', 1)),
+            'damage': int(cfg.get('damage', 20)),
+            'form': cfg.get('form', 'RECTANGLE')
+        }
+
+    def tanks_spawn_enemigo(self, nombre_def, coords=None):
+        cfg = self.defs_tanks.get(nombre_def, {})
+        if not coords:
+            coords = self.tanks_celda_libre()
+        if not coords:
+            return
+        self.tanks_enemigos.append({
+            'id': nombre_def + '_' + str(len(self.tanks_enemigos)) + '_' + str(random.randint(100, 999)),
+            'def_name': nombre_def,
+            'type': 'ENEMY',
+            'x': coords[0],
+            'y': coords[1],
+            'dir': 'DOWN',
+            'color': cfg.get('color', '#E74C3C'),
+            'hp': int(cfg.get('hp', 30)),
+            'speed': int(cfg.get('speed', 1)),
+            'damage': int(cfg.get('damage', 10)),
+            'fire_rate': int(cfg.get('fire_rate', 3)),
+            'points': int(cfg.get('points', 100)),
+            'form': cfg.get('form', 'RECTANGLE'),
+            'tick_acc': 0
+        })
+
+    def tanks_spawn_boss(self, nombre_def='FINAL_BOSS', coords=None):
+        cfg = self.defs_tanks.get(nombre_def, {})
+        x, y = coords if coords else (self.ancho // 2, 2)
+        self.tanks_boss = {
+            'id': 'FINAL_BOSS',
+            'type': 'BOSS',
+            'x': x,
+            'y': y,
+            'dir': 'DOWN',
+            'color': cfg.get('color', '#7D3C98'),
+            'hp': int(cfg.get('hp', 300)),
+            'max_hp': int(cfg.get('hp', 300)),
+            'speed': int(cfg.get('speed', 1)),
+            'damage': int(cfg.get('damage', 25)),
+            'fire_rate': int(cfg.get('fire_rate', 2)),
+            'points': int(cfg.get('points', 1000)),
+            'form': cfg.get('form', 'SQUARE'),
+            'size': 2,
+            'tick_acc': 0
+        }
+        self.tanks_boss_spawned = True
+
+    def tanks_spawn_muro(self, nombre_muro, coords):
+        if not coords:
+            return
+        cfg = self.defs_walls.get(nombre_muro, {})
+        dest = cfg.get('destructible', nombre_muro != 'STEEL_WALL')
+        if isinstance(dest, basestring):
+            dest = dest.upper() in ('ON', 'TRUE', '1')
+        self.tanks_muros[(coords[0], coords[1])] = {
+            'tipo': nombre_muro,
+            'color': cfg.get('color', '#B5651D'),
+            'hp': int(cfg.get('hp', 40)),
+            'destructible': bool(dest)
+        }
+
+    def tanks_spawn_powerup(self, nombre_pu='REPAIR_HAMMER', coords=None):
+        if not coords:
+            coords = self.tanks_celda_libre()
+        if not coords:
+            return
+        cfg = self.defs_powerups.get(nombre_pu, {})
+        params = cfg.get('params', {})
+        self.tanks_powerups.append({
+            'tipo': nombre_pu,
+            'x': coords[0],
+            'y': coords[1],
+            'color': cfg.get('color', '#FFD700'),
+            'heal': int(cfg.get('heal', params.get('HEAL', 25)))
+        })
+
+    def tanks_celda_libre(self):
+        libres = []
+        for y in range(self.alto):
+            for x in range(self.ancho):
+                if not self.tanks_celda_bloqueada(x, y):
+                    libres.append((x, y))
+        return random.choice(libres) if libres else None
+
+    def tanks_celda_bloqueada(self, x, y, ignorar_id=None):
+        if (x, y) in self.tanks_muros:
+            return True
+        if self.tank_jugador and self.tank_jugador['id'] != ignorar_id:
+            if self.tank_jugador['x'] == x and self.tank_jugador['y'] == y:
+                return True
+        for e in self.tanks_enemigos:
+            if e['id'] != ignorar_id and e['x'] == x and e['y'] == y:
+                return True
+        if self.tanks_boss and self.tanks_boss['id'] != ignorar_id:
+            bx, by = self.tanks_boss['x'], self.tanks_boss['y']
+            bs = self.tanks_boss.get('size', 2)
+            if bx <= x < bx + bs and by <= y < by + bs:
+                return True
+        return False
+
+    def tanks_mover_tanque(self, tanque, direccion):
+        if self.juego_terminado or not tanque:
+            return False
+        tanque['dir'] = direccion
+        dx, dy = self.tanks_dirs[direccion]
+        nx = tanque['x'] + dx
+        ny = tanque['y'] + dy
+        size = tanque.get('size', 1)
+
+        if not (0 <= nx and nx + size <= self.ancho and 0 <= ny and ny + size <= self.alto):
+            return False
+
+        for ox in range(size):
+            for oy in range(size):
+                if self.tanks_celda_bloqueada(nx + ox, ny + oy, ignorar_id=tanque['id']):
+                    return False
+
+        tanque['x'] = nx
+        tanque['y'] = ny
+
+        if tanque['type'] == 'PLAYER':
+            for pu in list(self.tanks_powerups):
+                if pu['x'] == nx and pu['y'] == ny:
+                    self.tanks_powerups.remove(pu)
+                    if hasattr(self, 'tanks_recoger_martillo'):
+                        self.tanks_recoger_martillo(pu)
+                    else:
+                        self.tank_jugador['hp'] = min(
+                            self.tank_jugador['max_hp'],
+                            self.tank_jugador['hp'] + pu.get('heal', 25)
+                        )
+                        self.puntuacion += 50
+        return True
+
+    def tanks_disparar(self, tanque, nombre_bala='PLAYER_BULLET'):
+        if self.juego_terminado or not tanque:
+            return
+        cfg_bala = self.defs_bullets.get(nombre_bala, {})
+        dx, dy = self.tanks_dirs[tanque['dir']]
+        size = tanque.get('size', 1)
+        bx = tanque['x'] + (size // 2) + dx
+        by = tanque['y'] + (size // 2) + dy
+
+        if not (0 <= bx < self.ancho and 0 <= by < self.alto):
+            return
+
+        bala = {
+            'x': bx,
+            'y': by,
+            'dir': tanque['dir'],
+            'owner': tanque['type'],
+            'damage': int(cfg_bala.get('damage', tanque.get('damage', 10))),
+            'speed': int(cfg_bala.get('speed', 2)),
+            'size': int(cfg_bala.get('size', 1)),
+            'color': cfg_bala.get('color', '#FFFF00' if tanque['type'] == 'PLAYER' else '#FF6347')
+        }
+
+        if not self.tanks_resolver_impacto_bala(bala):
+            self.tanks_balas.append(bala)
+
+    def tanks_mover_balas(self):
+        balas_vivas = []
+        for bala in self.tanks_balas:
+            impacto = False
+            pasos = max(1, bala.get('speed', 1))
+            for _ in range(pasos):
+                dx, dy = self.tanks_dirs[bala['dir']]
+                bala['x'] += dx
+                bala['y'] += dy
+                if not (0 <= bala['x'] < self.ancho and 0 <= bala['y'] < self.alto):
+                    impacto = True
+                    break
+                if self.tanks_resolver_impacto_bala(bala):
+                    impacto = True
+                    break
+            if not impacto:
+                balas_vivas.append(bala)
+        self.tanks_balas = balas_vivas
+
+    def tanks_resolver_impacto_bala(self, bala):
+        pos = (bala['x'], bala['y'])
+
+        # 1. Colision con muros
+        if pos in self.tanks_muros:
+            muro = self.tanks_muros[pos]
+            if muro['destructible']:
+                muro['hp'] -= bala['damage']
+                if muro['hp'] <= 0:
+                    del self.tanks_muros[pos]
+            return True
+
+        # 2. Bala del jugador contra enemigos o Final Boss
+        if bala['owner'] == 'PLAYER':
+            for enemigo in list(self.tanks_enemigos):
+                if enemigo['x'] == bala['x'] and enemigo['y'] == bala['y']:
+                    if hasattr(self, 'tanks_danar_enemigo'):
+                        self.tanks_danar_enemigo(enemigo, bala['damage'])
+                    else:
+                        enemigo['hp'] -= bala['damage']
+                        if enemigo['hp'] <= 0:
+                            self.tanks_enemigos.remove(enemigo)
+                            self.puntuacion += enemigo.get('points', 100)
+                            self.tanks_spawn_enemigo(enemigo.get('def_name', 'SCOUT_TANK'))
+                    return True
+
+            if self.tanks_boss:
+                bx, by = self.tanks_boss['x'], self.tanks_boss['y']
+                bs = self.tanks_boss.get('size', 2)
+                if bx <= bala['x'] < bx + bs and by <= bala['y'] < by + bs:
+                    if hasattr(self, 'tanks_danar_boss'):
+                        self.tanks_danar_boss(bala['damage'])
+                    else:
+                        self.tanks_boss['hp'] -= bala['damage']
+                        if self.tanks_boss['hp'] <= 0:
+                            self.puntuacion += self.tanks_boss.get('points', 1000)
+                            self.tanks_boss = None
+                            self.tanks_victoria = True
+                            self.juego_terminado = True
+                    return True
+
+        # 3. Bala enemiga o del Boss contra el jugador
+        elif bala['owner'] in ('ENEMY', 'BOSS') and self.tank_jugador:
+            if self.tank_jugador['x'] == bala['x'] and self.tank_jugador['y'] == bala['y']:
+                if hasattr(self, 'tanks_danar_jugador'):
+                    self.tanks_danar_jugador(bala['damage'])
+                else:
+                    self.tank_jugador['hp'] = max(0, self.tank_jugador['hp'] - bala['damage'])
+                    if self.tank_jugador['hp'] <= 0:
+                        self.juego_terminado = True
+                return True
+
+        return False
+
+    def tanks_actualizar_enemigos(self, nombre_bala='ENEMY_BULLET'):
+        for enemigo in self.tanks_enemigos:
+            enemigo['tick_acc'] += 1
+            cadencia_mov = max(1, 5 - enemigo.get('speed', 1))
+            if enemigo['tick_acc'] % cadencia_mov == 0:
+                if random.random() < 0.30 or not self.tanks_mover_tanque(enemigo, enemigo['dir']):
+                    self.tanks_mover_tanque(enemigo, random.choice(['UP', 'DOWN', 'LEFT', 'RIGHT']))
+            if enemigo['tick_acc'] % max(2, enemigo.get('fire_rate', 3) * 3) == 0:
+                self.tanks_disparar(enemigo, nombre_bala)
+
+    def tanks_actualizar_boss(self, nombre_bala='BOSS_BULLET'):
+        if not self.tanks_boss:
+            return
+        self.tanks_boss['tick_acc'] += 1
+        if self.tanks_boss['tick_acc'] % 3 == 0:
+            if not self.tanks_mover_tanque(self.tanks_boss, self.tanks_boss['dir']):
+                self.tanks_mover_tanque(self.tanks_boss, random.choice(['LEFT', 'RIGHT', 'DOWN', 'UP']))
+        if self.tanks_boss['tick_acc'] % 4 == 0:
+            self.tanks_disparar(self.tanks_boss, nombre_bala)
+
+    def tanks_dibujar_todo(self):
+        for (mx, my), muro in self.tanks_muros.items():
+            self.dibujar_celda(mx, my, muro['color'])
+            if not muro['destructible']:
+                ts = self.taman_celda
+                self.canvas.create_line(mx * ts, my * ts, (mx + 1) * ts, (my + 1) * ts, fill='#CCCCCC')
+
+        for pu in self.tanks_powerups:
+            self.tanks_dibujar_martillo(pu['x'], pu['y'], pu['color'])
+
+        if self.tank_jugador:
+            self.tanks_dibujar_tanque(self.tank_jugador)
+            self.label_hp.config(text="VIDA (HP)\n" + str(self.tank_jugador['hp']))
+
+        for enemigo in self.tanks_enemigos:
+            self.tanks_dibujar_tanque(enemigo)
+
+        if self.tanks_boss:
+            self.tanks_dibujar_tanque(self.tanks_boss)
+            self.label_estado_tanks.config(text="BOSS HP\n" + str(self.tanks_boss['hp']))
+        elif self.tanks_victoria:
+            self.label_estado_tanks.config(text="VICTORIA!")
+
+        ts = self.taman_celda
+        for b in self.tanks_balas:
+            cx = b['x'] * ts + ts / 2.0
+            cy = b['y'] * ts + ts / 2.0
+            r = ts * (0.28 if b.get('size', 1) > 1 else 0.16)
+            self.canvas.create_oval(cx - r, cy - r, cx + r, cy + r, fill=b['color'], outline='#FFFFFF')
+
+    def tanks_dibujar_tanque(self, tanque):
+        ts = self.taman_celda
+        size = tanque.get('size', 1)
+        x1 = tanque['x'] * ts
+        y1 = tanque['y'] * ts
+        x2 = x1 + ts * size
+        y2 = y1 + ts * size
+        cx = (x1 + x2) / 2.0
+        cy = (y1 + y2) / 2.0
+        color = tanque['color']
+        forma = tanque.get('form', 'RECTANGLE')
+
+        if forma == 'TRIANGULAR':
+            d = tanque['dir']
+            if d == 'UP':
+                pts = [cx, y1 + 2, x1 + 2, y2 - 2, x2 - 2, y2 - 2]
+            elif d == 'DOWN':
+                pts = [cx, y2 - 2, x1 + 2, y1 + 2, x2 - 2, y1 + 2]
+            elif d == 'LEFT':
+                pts = [x1 + 2, cy, x2 - 2, y1 + 2, x2 - 2, y2 - 2]
+            else:
+                pts = [x2 - 2, cy, x1 + 2, y1 + 2, x1 + 2, y2 - 2]
+            self.canvas.create_polygon(pts, fill=color, outline='#000000', width=2)
+        else:
+            self.canvas.create_rectangle(x1 + 2, y1 + 2, x2 - 2, y2 - 2,
+                                         fill=color, outline='#000000', width=2)
+
+        r_torreta = (ts * size) * 0.22
+        self.canvas.create_oval(cx - r_torreta, cy - r_torreta, cx + r_torreta, cy + r_torreta,
+                                fill='#222222', outline='#FFFFFF')
+        ancho_c = max(3, int((ts * size) * 0.18))
+        d = tanque['dir']
+        if d == 'UP':
+            c_coords = (cx - ancho_c / 2.0, y1, cx + ancho_c / 2.0, cy)
+        elif d == 'DOWN':
+            c_coords = (cx - ancho_c / 2.0, cy, cx + ancho_c / 2.0, y2)
+        elif d == 'LEFT':
+            c_coords = (x1, cy - ancho_c / 2.0, cx, cy + ancho_c / 2.0)
+        else:
+            c_coords = (cx, cy - ancho_c / 2.0, x2, cy + ancho_c / 2.0)
+        self.canvas.create_rectangle(c_coords[0], c_coords[1], c_coords[2], c_coords[3],
+                                     fill='#EEEEEE', outline='#000000')
+
+    def tanks_dibujar_martillo(self, x, y, color):
+        ts = self.taman_celda
+        x1, y1 = x * ts, y * ts
+        self.canvas.create_rectangle(x1 + ts * 0.2, y1 + ts * 0.15, x1 + ts * 0.8, y1 + ts * 0.45,
+                                     fill=color, outline='#000000')
+        self.canvas.create_rectangle(x1 + ts * 0.42, y1 + ts * 0.45, x1 + ts * 0.58, y1 + ts * 0.88,
+                                     fill='#A0522D', outline='#000000')
     # METODOS DE SALIDA (ADAPTADOS A GUI)
     # -----------------------------------
 
