@@ -1,0 +1,582 @@
+{
+  "target_scores": [
+    {
+      "score": 1000, 
+      "event": "ON_TARGET_SCORE_1000"
+    }
+  ], 
+  "tank_roles": {
+    "player": "PLAYER_TANK", 
+    "boss": "FINAL_BOSS", 
+    "enemies": [
+      "SCOUT_TANK", 
+      "RAPID_TANK", 
+      "HEAVY_TANK"
+    ]
+  }, 
+  "walls": {
+    "BRICK_WALL": {
+      "color": "#B5651D", 
+      "hp": 40, 
+      "estados": [
+        [
+          [
+            1
+          ]
+        ]
+      ], 
+      "destructible": true
+    }, 
+    "STEEL_WALL": {
+      "color": "#808080", 
+      "hp": 999, 
+      "estados": [
+        [
+          [
+            1
+          ]
+        ]
+      ], 
+      "destructible": false
+    }
+  }, 
+  "shapes": {}, 
+  "colors": {}, 
+  "tipo_juego": "TANKS", 
+  "weights": {}, 
+  "tanks": {
+    "PLAYER_TANK": {
+      "target": null, 
+      "form": "RECTANGLE", 
+      "fire_rate": 1, 
+      "type": "PLAYER", 
+      "hp": 100, 
+      "damage": 20, 
+      "ai": null, 
+      "points": 0, 
+      "estados": [
+        [
+          [
+            0, 
+            1, 
+            0
+          ], 
+          [
+            1, 
+            1, 
+            1
+          ], 
+          [
+            1, 
+            0, 
+            1
+          ]
+        ]
+      ], 
+      "speed": 1, 
+      "color": "#20B2AA"
+    }, 
+    "HEAVY_TANK": {
+      "target": "PLAYER", 
+      "form": "SQUARE", 
+      "fire_rate": 4, 
+      "type": "ENEMY", 
+      "hp": 60, 
+      "damage": 15, 
+      "ai": "AGGRESSIVE", 
+      "points": 250, 
+      "estados": [
+        [
+          [
+            1, 
+            1, 
+            1
+          ], 
+          [
+            1, 
+            1, 
+            1
+          ], 
+          [
+            1, 
+            1, 
+            1
+          ]
+        ]
+      ], 
+      "speed": 1, 
+      "color": "#8E44AD"
+    }, 
+    "SCOUT_TANK": {
+      "target": "PLAYER", 
+      "form": "RECTANGLE", 
+      "fire_rate": 3, 
+      "type": "ENEMY", 
+      "hp": 30, 
+      "damage": 10, 
+      "ai": "AGGRESSIVE", 
+      "points": 100, 
+      "estados": [
+        [
+          [
+            0, 
+            1, 
+            0
+          ], 
+          [
+            1, 
+            1, 
+            1
+          ], 
+          [
+            1, 
+            0, 
+            1
+          ]
+        ]
+      ], 
+      "speed": 2, 
+      "color": "#E74C3C"
+    }, 
+    "RAPID_TANK": {
+      "target": "PLAYER", 
+      "form": "TRIANGULAR", 
+      "fire_rate": 2, 
+      "type": "ENEMY", 
+      "hp": 20, 
+      "damage": 8, 
+      "ai": "AGGRESSIVE", 
+      "points": 150, 
+      "estados": [
+        [
+          [
+            0, 
+            1, 
+            0
+          ], 
+          [
+            1, 
+            1, 
+            1
+          ], 
+          [
+            0, 
+            1, 
+            0
+          ]
+        ]
+      ], 
+      "speed": 3, 
+      "color": "#F39C12"
+    }, 
+    "FINAL_BOSS": {
+      "target": "PLAYER", 
+      "form": "SQUARE", 
+      "fire_rate": 2, 
+      "type": "BOSS", 
+      "hp": 300, 
+      "damage": 25, 
+      "ai": "AGGRESSIVE", 
+      "points": 1000, 
+      "estados": [
+        [
+          [
+            1, 
+            1, 
+            1, 
+            1, 
+            1
+          ], 
+          [
+            1, 
+            1, 
+            1, 
+            1, 
+            1
+          ], 
+          [
+            0, 
+            1, 
+            1, 
+            1, 
+            0
+          ], 
+          [
+            0, 
+            1, 
+            0, 
+            1, 
+            0
+          ]
+        ]
+      ], 
+      "speed": 1, 
+      "color": "#7D3C98"
+    }
+  }, 
+  "powerups": {
+    "REPAIR_HAMMER": {
+      "color": "#FFD700", 
+      "heal": 25, 
+      "chance": 1, 
+      "efecto": "HEAL", 
+      "condiciones": [], 
+      "params": {
+        "HEAL": 25, 
+        "CHANCE": 1
+      }, 
+      "estados": [
+        [
+          [
+            1, 
+            1
+          ], 
+          [
+            0, 
+            1
+          ]
+        ]
+      ], 
+      "type": "HAMMER"
+    }
+  }, 
+  "bullets": {
+    "BOSS_BULLET": {
+      "color": "#FF00FF", 
+      "type": "BULLET", 
+      "speed": 2, 
+      "damage": 25, 
+      "size": 2
+    }, 
+    "ENEMY_BULLET": {
+      "color": "#FF6347", 
+      "type": "BULLET", 
+      "speed": 2, 
+      "damage": 10, 
+      "size": 1
+    }, 
+    "PLAYER_BULLET": {
+      "color": "#FFFF00", 
+      "type": "BULLET", 
+      "speed": 3, 
+      "damage": 20, 
+      "size": 1
+    }
+  }, 
+  "config": {
+    "grid_size": [
+      20, 
+      16
+    ]
+  }, 
+  "events": {
+    "ON_COLLISION_PLAYER_ENEMY": [
+      {
+        "params": [
+          10
+        ], 
+        "accion": "DAMAGE", 
+        "objeto": "PLAYER"
+      }
+    ], 
+    "ON_KEY_DOWN": [
+      {
+        "params": [
+          "DOWN"
+        ], 
+        "accion": "MOVE", 
+        "objeto": "PLAYER"
+      }
+    ], 
+    "ON_PLAYER_HIT": [
+      {
+        "params": [
+          "HP_ZERO"
+        ], 
+        "accion": "GAME_OVER_IF", 
+        "objeto": "PLAYER"
+      }
+    ], 
+    "ON_HAMMER_COLLECTED": [
+      {
+        "params": [], 
+        "accion": "INCREASE_SCORE", 
+        "objeto": "50"
+      }
+    ], 
+    "ON_KEY_UP": [
+      {
+        "params": [
+          "UP"
+        ], 
+        "accion": "MOVE", 
+        "objeto": "PLAYER"
+      }
+    ], 
+    "ON_TICK": [
+      {
+        "params": [
+          "FORWARD"
+        ], 
+        "accion": "MOVE", 
+        "objeto": "PLAYER"
+      }, 
+      {
+        "params": [
+          "FORWARD"
+        ], 
+        "accion": "MOVE", 
+        "objeto": "BULLETS"
+      }, 
+      {
+        "params": [
+          "ENEMY_BULLET"
+        ], 
+        "accion": "FIRE", 
+        "objeto": "ENEMIES"
+      }, 
+      {
+        "params": [
+          "BOSS_BULLET"
+        ], 
+        "accion": "FIRE", 
+        "objeto": "BOSS"
+      }
+    ], 
+    "ON_DESTROY_BOSS": [
+      {
+        "params": [], 
+        "accion": "INCREASE_SCORE", 
+        "objeto": "1000"
+      }, 
+      {
+        "params": [], 
+        "accion": "VICTORY", 
+        "objeto": null
+      }
+    ], 
+    "ON_COLLISION_BULLET_PLAYER": [
+      {
+        "params": [
+          "BULLET_DAMAGE"
+        ], 
+        "accion": "DAMAGE", 
+        "objeto": "PLAYER"
+      }
+    ], 
+    "ON_DESTROY_ENEMY": [
+      {
+        "params": [], 
+        "accion": "INCREASE_SCORE", 
+        "objeto": "ENEMY_POINTS"
+      }, 
+      {
+        "params": [
+          "RANDOM"
+        ], 
+        "accion": "SPAWN", 
+        "objeto": "ENEMY"
+      }
+    ], 
+    "ON_COLLISION_PLAYER_POWERUP": [
+      {
+        "params": [
+          "POWERUP_VALUE"
+        ], 
+        "accion": "HEAL", 
+        "objeto": "PLAYER"
+      }, 
+      {
+        "params": [], 
+        "accion": "DESTROY", 
+        "objeto": "POWERUP"
+      }
+    ], 
+    "ON_TARGET_SCORE_1000": [
+      {
+        "params": [
+          "FINAL_BOSS", 
+          [
+            10, 
+            2
+          ]
+        ], 
+        "accion": "SPAWN", 
+        "objeto": "BOSS"
+      }
+    ], 
+    "ON_COLLISION_BULLET_BOSS": [
+      {
+        "params": [
+          "BULLET_DAMAGE"
+        ], 
+        "accion": "DAMAGE", 
+        "objeto": "BOSS"
+      }
+    ], 
+    "ON_COLLISION_BULLET_WALL": [
+      {
+        "params": [
+          "BULLET_DAMAGE"
+        ], 
+        "accion": "DAMAGE", 
+        "objeto": "WALL"
+      }
+    ], 
+    "ON_START": [
+      {
+        "params": [
+          [
+            10, 
+            14
+          ]
+        ], 
+        "accion": "SPAWN", 
+        "objeto": "PLAYER"
+      }, 
+      {
+        "params": [
+          "SCOUT_TANK", 
+          [
+            4, 
+            3
+          ]
+        ], 
+        "accion": "SPAWN", 
+        "objeto": "ENEMY"
+      }, 
+      {
+        "params": [
+          "RAPID_TANK", 
+          [
+            10, 
+            2
+          ]
+        ], 
+        "accion": "SPAWN", 
+        "objeto": "ENEMY"
+      }, 
+      {
+        "params": [
+          "HEAVY_TANK", 
+          [
+            16, 
+            3
+          ]
+        ], 
+        "accion": "SPAWN", 
+        "objeto": "ENEMY"
+      }, 
+      {
+        "params": [
+          "REPAIR_HAMMER", 
+          "RANDOM"
+        ], 
+        "accion": "SPAWN", 
+        "objeto": "POWERUP"
+      }, 
+      {
+        "params": [
+          "BRICK_WALL", 
+          [
+            5, 
+            7
+          ]
+        ], 
+        "accion": "SPAWN", 
+        "objeto": "WALL"
+      }, 
+      {
+        "params": [
+          "BRICK_WALL", 
+          [
+            6, 
+            7
+          ]
+        ], 
+        "accion": "SPAWN", 
+        "objeto": "WALL"
+      }, 
+      {
+        "params": [
+          "BRICK_WALL", 
+          [
+            13, 
+            7
+          ]
+        ], 
+        "accion": "SPAWN", 
+        "objeto": "WALL"
+      }, 
+      {
+        "params": [
+          "BRICK_WALL", 
+          [
+            14, 
+            7
+          ]
+        ], 
+        "accion": "SPAWN", 
+        "objeto": "WALL"
+      }, 
+      {
+        "params": [
+          "STEEL_WALL", 
+          [
+            9, 
+            5
+          ]
+        ], 
+        "accion": "SPAWN", 
+        "objeto": "WALL"
+      }, 
+      {
+        "params": [
+          "STEEL_WALL", 
+          [
+            10, 
+            5
+          ]
+        ], 
+        "accion": "SPAWN", 
+        "objeto": "WALL"
+      }
+    ], 
+    "ON_KEY_SPACE": [
+      {
+        "params": [
+          "PLAYER_BULLET"
+        ], 
+        "accion": "FIRE", 
+        "objeto": "PLAYER"
+      }
+    ], 
+    "ON_KEY_RIGHT": [
+      {
+        "params": [
+          "RIGHT"
+        ], 
+        "accion": "MOVE", 
+        "objeto": "PLAYER"
+      }
+    ], 
+    "ON_COLLISION_BULLET_ENEMY": [
+      {
+        "params": [
+          "BULLET_DAMAGE"
+        ], 
+        "accion": "DAMAGE", 
+        "objeto": "ENEMY"
+      }
+    ], 
+    "ON_KEY_LEFT": [
+      {
+        "params": [
+          "LEFT"
+        ], 
+        "accion": "MOVE", 
+        "objeto": "PLAYER"
+      }
+    ]
+  }
+}
