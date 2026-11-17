@@ -1394,10 +1394,116 @@ class Juego:
                                      fill=color, outline='#000000')
         self.canvas.create_rectangle(x1 + ts * 0.42, y1 + ts * 0.45, x1 + ts * 0.58, y1 + ts * 0.88,
                                      fill='#A0522D', outline='#000000')
+    # =====================================================================
+    # ACT5: (Brick Tanks) - COMBATE, ESTADOS Y JEFE FINAL [Laura Cardona]
+    # Metodos que el nucleo de Tanks busca con hasattr(): tanks_danar_jugador,
+    # tanks_danar_enemigo, tanks_danar_boss, tanks_recoger_martillo y
+    # tanks_actualizar_estado (este ultimo lo llama game_loop en cada ciclo).
+    # Solo se ejecutan cuando GAME_TYPE es TANKS.
+    # =====================================================================
+
+    # ACT5: segundos que tarda en reaparecer el martillo despues de recogerlo
+    TANKS_RESPAWN_MARTILLO = 10
+
+    def _tanks_combate_init(self):
+        # ACT5: estado propio del combate (se crea la primera vez que se necesita)
+        if getattr(self, 'tanks_combate_listo', False):
+            return
+        self.tanks_combate_listo = True
+        self.tanks_objetivos_cumplidos = []   # puntajes de ON TARGET_SCORE ya disparados
+        self.tanks_martillo_t = None          # hora en que se recogio el ultimo martillo
+
+    def tanks_danar_jugador(self, dano):
+        # ACT5: resta resistencia al jugador; sin HP -> derrota
+        self._tanks_combate_init()
+        if not self.tank_jugador or self.juego_terminado:
+            return
+        self.tank_jugador['hp'] = max(0, self.tank_jugador['hp'] - int(dano))
+        if self.tank_jugador['hp'] <= 0:
+            self.tanks_victoria = False
+            self.juego_terminado = True
+
+    def tanks_danar_enemigo(self, enemigo, dano):
+        # ACT5: resistencia del enemigo; al llegar a 0 se destruye y suma sus puntos
+        self._tanks_combate_init()
+        enemigo['hp'] -= int(dano)
+        if enemigo['hp'] > 0:
+            return
+        if enemigo in self.tanks_enemigos:
+            self.tanks_enemigos.remove(enemigo)
+        self.puntuacion += int(enemigo.get('points', 100))
+        # Mientras el jefe no haya aparecido, un enemigo destruido se reemplaza
+        if not self.tanks_boss_spawned:
+            self.tanks_spawn_enemigo(enemigo.get('def_name', 'SCOUT_TANK'))
+
+    def tanks_danar_boss(self, dano):
+        # ACT5: dano acumulativo al Final Boss; con 0 HP -> puntos y victoria
+        self._tanks_combate_init()
+        if not self.tanks_boss:
+            return
+        self.tanks_boss['hp'] -= int(dano)
+        if self.tanks_boss['hp'] > 0:
+            return
+        self.puntuacion += int(self.tanks_boss.get('points', 1000))
+        self.tanks_boss = None
+        self.tanks_victoria = True
+        self.juego_terminado = True
+
+    def tanks_recoger_martillo(self, pu):
+        # ACT5: el martillo recupera 'heal' puntos de HP sin pasar del maximo
+        self._tanks_combate_init()
+        jugador = self.tank_jugador
+        if not jugador:
+            return
+        jugador['hp'] = min(jugador['max_hp'], jugador['hp'] + int(pu.get('heal', 25)))
+        self.ejecutar_evento('ON_HAMMER_COLLECTED')   # el .brick define los puntos extra
+        self.tanks_martillo_t = time.time()
+
+    def _tanks_nombre_martillo(self):
+        for nombre, cfg in self.defs_powerups.items():
+            if cfg.get('type') == 'HAMMER':
+                return nombre
+        return 'REPAIR_HAMMER'
+
+    def tanks_actualizar_estado(self):
+        # ACT5: se llama en cada ciclo de game_loop (solo Tanks)
+        self._tanks_combate_init()
+        if self.juego_terminado:
+            return
+
+        # 1. Transicion al jefe: ON TARGET_SCORE n (target_scores viene del compilador)
+        for objetivo in self.datos_juego.get('target_scores', []):
+            puntos = objetivo.get('score')
+            if puntos in self.tanks_objetivos_cumplidos:
+                continue
+            if self.puntuacion >= puntos:
+                self.tanks_objetivos_cumplidos.append(puntos)
+                self.ejecutar_evento(objetivo.get('event'))   # ejecuta SPAWN BOSS ...
+                if self.tanks_boss_spawned:
+                    self.tanks_enemigos = []   # duelo con el jefe: se retiran los enemigos
+
+        # 2. Reaparicion aleatoria del martillo, unos segundos despues de recogerlo
+        if self.tanks_martillo_t is not None and not self.tanks_powerups:
+            if time.time() - self.tanks_martillo_t >= self.TANKS_RESPAWN_MARTILLO:
+                self.tanks_spawn_powerup(self._tanks_nombre_martillo())
+                self.tanks_martillo_t = None
+
+    def tanks_mostrar_fin(self):
+        # ACT5: mensaje de fin de juego de Tanks (victoria o derrota)
+        if self.tanks_victoria:
+            tkMessageBox.showinfo("VICTORIA!", "Derrotaste al Final Boss!\nPuntuacion Final: " + str(self.puntuacion))
+        else:
+            tkMessageBox.showinfo("DERROTA", "Te quedaste sin resistencia.\nPuntuacion Final: " + str(self.puntuacion))
+        self.root.destroy()
+        sys.exit(0)
     # METODOS DE SALIDA (ADAPTADOS A GUI)
     # -----------------------------------
 
     def mostrar_game_over(self):
+        # ACT5: Tanks distingue victoria de derrota
+        if self.tipo_juego == 'TANKS':
+            self.tanks_mostrar_fin()
+            return
         # Muestra una ventana de mensaje de Tkinter
         tkMessageBox.showinfo("Juego Terminado", "Puntuacion Final: " + str(self.puntuacion))
         self.root.destroy()
