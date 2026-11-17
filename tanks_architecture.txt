@@ -5,8 +5,8 @@
 Asignatura : Teoria de Lenguajes de Programacion (TLP 2026-2S)
 Proyecto   : Ecosistema BrickScript
 Equipo     : 22
-Integrantes: Geremy Jhon Sierra Sierra, Juan Fernando Zapata Garcia,
-             Maickel Sabas Giraldo, Laura Cardona Guarin
+Integrantes: Geremy Jhon Sierra Sierra, Juan Fernando Zapata García,
+             Maickel Sabas Giraldo, Laura Cardona Guarín
 
 Este documento explica como esta construido Brick Tanks dentro de
 BrickScript: que piezas del ecosistema se ampliaron, como se
@@ -19,17 +19,17 @@ que los cuatro juegos anteriores sigan funcionando.
 Brick Tanks NO es un programa aparte: es un cuarto tipo de juego
 (GAME_TYPE TANKS) que usa el mismo compilador y el mismo motor que
 Tetris y Snake. Todo lo que define al juego (tanques, enemigos,
-jefe, balas, muros, martillo, reglas de combate y la puntuacion que
+jefe, balas, muros, martillo, reglas de combate y la puntuación que
 hace aparecer al jefe) esta escrito en tanks.brick, no en Python.
 
   tanks.brick --> compiler.py --> tanks.json --> runtime.py
-  (lo escribe     (lo entiende y   (representacion  (lo ejecuta,
-   el programador) lo valida)       intermedia)      lo dibuja)
+  (lo escribe     (lo entiende y   (representación  (lo ejecuta,
+  el programador) lo valida)       intermedia)      lo dibuja)
   tanks.bnf describe formalmente lo que el compilador acepta.
 
 Regla de oro: si Brick Tanks funciona pero Tetris, Tetris extendido,
 Snake o Snake evolucionado dejan de compilar o ejecutar, la
-integracion no esta terminada. Por eso todo lo nuevo es opcional y
+integración no esta terminada. Por eso todo lo nuevo es opcional y
 solo se activa cuando el archivo declara GAME_TYPE TANKS.
 
 Que hace el juego:
@@ -40,34 +40,34 @@ Que hace el juego:
   - Un martillo (REPAIR_HAMMER) recupera resistencia (HP).
   - Los muros de ladrillo se destruyen; los de acero no.
   - Al llegar a 1000 puntos (ON TARGET_SCORE 1000) aparece el
-    FINAL_BOSS (300 HP, mas grande, dispara con mas dano).
+    FINAL_BOSS (300 HP, mas grande, dispara con mas daño).
   - Si el jefe llega a 0 HP: VICTORIA. Si el jugador llega a 0 HP:
     derrota (GAME OVER).
 
 -------------------------------------------------------------
 1. ARCHIVOS DE LA ENTREGA
 -------------------------------------------------------------
-  games\tanks.brick            nuevo       definicion del juego
-  gramaticas bnf\tanks.bnf     nuevo       gramatica formal
-  compiler.py                  modificado  481 -> 895 lineas
-  runtime.py                   modificado  930 -> 1418 lineas
-  pruebas_compilador.py        actualizado pruebas automaticas (46 casos)
+  games\tanks.brick            nuevo       definición del juego
+  gramaticas bnf\tanks.bnf     nuevo       gramática formal
+  compiler.py                  modificado  481 -> 895 líneas
+  runtime.py                   modificado  930 -> 1418 líneas
+  pruebas_compilador.py        actualizado pruebas automáticas (46 casos)
   pruebas_runtime_tanks.py     nuevo       pruebas de runtime (9 casos)
   tanks_architecture.txt       nuevo       este documento
   jugar.bat                    SIN cambios (ya acepta "jugar tanks")
   Sin cambios: snake/tetris (.brick y .bnf), snake_evolved, tetris_remake.
 
-Para jugar:  jugar tanks      (Python 2.7, Tkinter, solo libreria estandar)
+Para jugar:  jugar tanks      (Python 2.7, Tkinter, solo librería estándar)
 
 -------------------------------------------------------------
 2. FLUJO DE LA INFORMACION
 -------------------------------------------------------------
  1) jugar.bat llama a compiler.py con games\tanks.brick.
  2) El Lexer parte el texto en tokens (palabras en MAYUSCULAS,
-    numeros, colores #RRGGBB, corchetes, parentesis, dos puntos).
+    números, colores #RRGGBB, corchetes, paréntesis, dos puntos).
  3) El Parser detecta GAME_TYPE TANKS y, desde ese momento, activa
     las rutinas de Tanks (DEFINE TANK / BULLET / WALL / POWERUP y los
-    eventos ON ...). Valida la sintaxis y la semantica.
+    eventos ON ...). Valida la sintaxis y la semántica.
  4) El compilador escribe games\tanks.json.
  5) runtime.py carga el JSON, detecta tipo_juego == 'TANKS' y
     delega en sus funciones tanks_* (no toca la logica de Tetris
@@ -127,7 +127,7 @@ Acciones:
 -------------------------------------------------------------
 
 5.1 INTEGRANTE 1 - GEREMY JHON SIERRA SIERRA
-    Compilador y representacion intermedia (compiler.py)
+    Compilador y representación intermedia (compiler.py)
 -------------------------------------------------------------
   - Analizo el Lexer y el Parser existentes y agrego un camino
     propio para Tanks que solo se activa con GAME_TYPE TANKS
@@ -143,52 +143,52 @@ Acciones:
     HP 100 para el jugador, 30 para un enemigo, 300 para el jefe;
     figura por defecto si falta STATE; rejilla 20x16 si falta
     GAME_GRID).
-  - Validaciones semanticas con mensaje y numero de linea:
+  - Validaciones semánticas con mensaje y numero de linea:
       * exactamente un tanque PLAYER y exactamente uno BOSS;
-      * al menos un ENEMY y una definicion BULLET;
+      * al menos un ENEMY y una definición BULLET;
       * enteros positivos donde corresponde (CHANCE y POINTS >= 0);
       * los nombres usados en SPAWN/FIRE deben existir y ser del
         tipo correcto;
       * un solo evento ON TARGET_SCORE; sin eventos duplicados ni
-        vacios; DEFINE TANK/BULLET/WALL/POWERUP solo con TANKS.
-  - Advertencias (no detienen la compilacion): no hay SPAWN BOSS en
+        vacíos; DEFINE TANK/BULLET/WALL/POWERUP solo con TANKS.
+  - Advertencias (no detienen la compilación): no hay SPAWN BOSS en
     el TARGET_SCORE, ON DESTROY_BOSS sin VICTORY, jefe no mas grande
     que los enemigos, todos los POWERUP con CHANCE 0, falta SPAWN
     PLAYER.
-  - Escribio pruebas_compilador.py (PruebasRetrocompatibilidad y
+  - Escribió pruebas_compilador.py (PruebasRetrocompatibilidad y
     PruebasTanks) para comprobar que los cuatro juegos antiguos no
     reciben claves de Tanks y que tanks.brick genera el JSON esperado.
 
 5.2 INTEGRANTE 2 - JUAN FERNANDO ZAPATA GARCIA
-    Gramatica y definicion del juego (tanks.bnf, tanks.brick)
+    Gramática y definición del juego (tanks.bnf, tanks.brick)
 -------------------------------------------------------------
-  - Parte de la organizacion de tetris_remake.bnf y snake_evolved.bnf
-    y escribe tanks.bnf con la misma notacion (::=, |, { }, [ ]).
+  - Parte de la organización de tetris_remake.bnf y snake_evolved.bnf
+    y escribe tanks.bnf con la misma notación (::=, |, { }, [ ]).
   - Define las producciones de tanques (PLAYER/ENEMY/BOSS), formas,
     colores hexadecimales, HP, balas, muros, martillo, eventos
     (incluido ON TARGET_SCORE), acciones (SPAWN, MOVE, FIRE, DAMAGE,
     HEAL, INCREASE_SCORE, DESTROY, VICTORY, GAME_OVER) y los
-    elementos lexicos.
-  - Documenta 14 reglas semanticas al final de la gramatica
+    elementos léxicos.
+  - Documenta 14 reglas semánticas al final de la gramática
     (un jugador, un jefe, enteros positivos, TARGET_SCORE una sola
-    vez, el jefe acumula dano, etc.), que luego el compilador valida.
+    vez, el jefe acumula daño, etc.), que luego el compilador valida.
   - Escribe tanks.brick: jugador (100 HP), tres enemigos (SCOUT 30 HP
     y 100 pts, RAPID 20 HP y 150 pts, HEAVY 60 HP y 250 pts), balas
     del jugador, de los enemigos y del jefe, muros de ladrillo y de
     acero, el martillo REPAIR_HAMMER (cura 25), el FINAL_BOSS (300 HP,
     25 de dano, 1000 pts), los eventos de inicio, tick, teclas,
-    colisiones y la transicion al jefe en ON TARGET_SCORE 1000.
-  - Se coordino con el compilador para que gramatica y Parser usen
+    colisiones y la transición al jefe en ON TARGET_SCORE 1000.
+  - Se coordino con el compilador para que gramática y Parser usen
     exactamente la misma sintaxis.
 
 5.3 INTEGRANTE 3 - MAICKEL SABAS GIRALDO
-    Runtime y mecanicas principales (runtime.py)
+    Runtime y mecánicas principales (runtime.py)
 -------------------------------------------------------------
-  El codigo esta marcado con el comentario "ACT5" (bloque
+  El código esta marcado con el comentario "ACT5" (bloque
   tanks_* desde "RUNTIME Y MECANICAS PRINCIPALES").
   - Deteccion del tipo de juego: Juego.__init__ llama a
     tanks_cargar_config() solo si tipo_juego == 'TANKS'; el dibujo,
-    las teclas y las acciones de evento tambien se desvian a Tanks
+    las teclas y las acciones de evento también se desvían a Tanks
     solo en ese caso. Tetris y Snake siguen su camino original.
   - tanks_cargar_config: carga tanques, balas, muros y power-ups del
     JSON; incluye valores de respaldo iguales a tanks.brick.
@@ -197,13 +197,13 @@ Acciones:
   - Movimiento por la cuadrilla con control de bordes y de celdas
     ocupadas (tanks_mover_tanque, tanks_celda_bloqueada).
   - Disparos y proyectiles (tanks_disparar, tanks_mover_balas): la
-    bala conserva la direccion del disparo y avanza sola segun su
+    bala conserva la dirección del disparo y avanza sola segun su
     SPEED.
   - Colisiones (tanks_resolver_impacto_bala): bala-muro (los muros
     destructibles pierden HP y desaparecen), bala del jugador contra
     enemigos y jefe, bala enemiga o del jefe contra el jugador.
   - Comportamiento enemigo (tanks_actualizar_enemigos): avanzan,
-    cambian de direccion al chocar y disparan segun su FIRE_RATE; el
+    cambian de dirección al chocar y disparan según su FIRE_RATE; el
     jefe (tanks_actualizar_boss) se mueve y dispara mas despacio.
   - Dibujo (tanks_dibujar_todo, tanks_dibujar_tanque,
     tanks_dibujar_martillo): muros, martillo, jugador, enemigos,
@@ -214,9 +214,9 @@ Acciones:
     Sistemas de combate, estados y jefe final
 -------------------------------------------------------------
   Es la capa que convierte el movimiento y los disparos de Maickel
-  en un juego con reglas: quien recibe dano, cuanto, cuando se gana
+  en un juego con reglas: quien recibe daño, cuanto, cuando se gana
   y cuando se pierde. Se acopla al runtime mediante "ganchos"
-  (ver seccion 6), de modo que el nucleo de Maickel funciona solo y
+  (ver sección 6), de modo que el núcleo de Maickel funciona solo y
   el modulo de combate lo extiende sin reescribirlo.
 
   a) Resistencia (HP) del jugador
@@ -225,60 +225,60 @@ Acciones:
        resta el DAMAGE de la bala; el HP nunca baja de 0.
      - Con HP 0 se activa la derrota (ON PLAYER_HIT: GAME_OVER IF
        PLAYER HP_ZERO) y el juego muestra "Juego Terminado" con la
-       puntuacion final.
+       puntuación final.
   b) Resistencia y comportamiento de los enemigos
      - Cada enemigo guarda su propio HP, velocidad, cadencia de
-       disparo y puntos segun su definicion (SCOUT 30, RAPID 20,
+       disparo y puntos según su definición (SCOUT 30, RAPID 20,
        HEAVY 60). La bala del jugador le resta su DAMAGE; al llegar
        a 0 el enemigo se elimina, suma sus POINTS (ENEMY_POINTS) y
        se crea otro (ON DESTROY_ENEMY: SPAWN ENEMY RANDOM), de modo
-       que la partida siempre tiene presion.
-  c) Dano por proyectiles
-     - El dano sale de la bala (BULLET_DAMAGE), no del tanque, asi
+       que la partida siempre tiene presión.
+  c) Daño por proyectiles
+     - El daño sale de la bala (BULLET_DAMAGE), no del tanque, asi
        cambiar un DAMAGE en tanks.brick cambia el juego sin tocar
-       Python. Orden de resolucion en cada impacto: muro, enemigo o
+       Python. Orden de resolución en cada impacto: muro, enemigo o
        jefe, jugador.
-  d) Martillo (recuperacion de HP)
+  d) Martillo (recuperación de HP)
      - Al pasar el jugador por la celda del REPAIR_HAMMER recupera
        HEAL puntos (25), sin superar su max_hp, el martillo
        desaparece y se suman 50 puntos (ON HAMMER_COLLECTED).
-  e) Puntuacion y progresion
-     - La puntuacion sube con INCREASE_SCORE y con los puntos de los
-       enemigos eliminados. Es el eje de la progresion: no hay
+  e) Puntuación y progresión
+     - La puntuación sube con INCREASE_SCORE y con los puntos de los
+       enemigos eliminados. Es el eje de la progresión: no hay
        niveles, el avance se mide en puntos.
-  f) Aparicion del Final Boss
+  f) Aparición del Final Boss
      - ON TARGET_SCORE 1000 compila al evento ON_TARGET_SCORE_1000
-       y a la lista "target_scores". Cuando la puntuacion alcanza
+       y a la lista "target_scores". Cuando la puntuación alcanza
        ese valor se ejecuta una sola vez SPAWN BOSS FINAL_BOSS
        AT (10, 2). El estado continuo del juego (gancho
        tanks_actualizar_estado, llamado en cada vuelta del game loop)
        es quien compara la puntuacion con "target_scores".
   g) Jefe final con resistencia acumulativa
-     - FINAL_BOSS: 300 HP, 25 de dano, mayor tamano, color y forma
+     - FINAL_BOSS: 300 HP, 25 de daño, mayor tamaño, color y forma
        definidos en el .brick. Cada impacto del jugador resta
-       BULLET_DAMAGE a su HP (el dano se acumula entre disparos) y
+       BULLET_DAMAGE a su HP (el daño se acumula entre disparos) y
        el panel lateral muestra "BOSS HP". Su bala (BOSS_BULLET) hace
-       25 de dano, mas que la de los enemigos (10).
+       25 de daño, mas que la de los enemigos (10).
   h) Estados de victoria y derrota
      - Victoria: al llegar el HP del jefe a 0 se ejecuta ON
        DESTROY_BOSS (INCREASE_SCORE 1000 y VICTORY); el panel muestra
        "VICTORIA!" y el juego termina.
      - Derrota: el HP del jugador llega a 0 (ON PLAYER_HIT).
-  i) Pruebas de integracion del combate
-     - Jugador recibe dano y llega a 0; enemigo muere y suma puntos;
-       martillo cura sin pasar del maximo; el jefe no aparece antes de
-       1000 puntos; el dano al jefe se acumula; victoria al derrotar
+  i) Pruebas de integración del combate
+     - Jugador recibe daño y llega a 0; enemigo muere y suma puntos;
+       martillo cura sin pasar del máximo; el jefe no aparece antes de
+       1000 puntos; el daño al jefe se acumula; victoria al derrotar
        al jefe; derrota al quedarse sin HP; y los cuatro juegos
        anteriores siguen funcionando.
-  j) Coordinacion: valores de HP, dano, puntos y TARGET_SCORE vienen
+  j) Coordinación: valores de HP, daño, puntos y TARGET_SCORE vienen
      de tanks.brick (Juan Fernando) y se leen del JSON (Geremy); el
-     modulo se engancha al runtime de Maickel. Tambien participo en
+     modulo se engancha al runtime de Maickel. También participo en
      este documento y en el video demostrativo.
 
 -------------------------------------------------------------
 6. CONTRATO ENTRE MODULOS (GANCHOS DEL RUNTIME)
 -------------------------------------------------------------
-El runtime base (Maickel) contiene un comportamiento minimo de
+El runtime base (Maickel) contiene un comportamiento mínimo de
 respaldo y ofrece cinco ganchos que el modulo de combate (Laura)
 implementa. Si un gancho existe, el runtime lo usa (hasattr); si no,
 aplica el respaldo. Asi cada parte se puede probar por separado.
@@ -286,14 +286,14 @@ aplica el respaldo. Asi cada parte se puede probar por separado.
   Gancho                        Quien lo llama               Responsabilidad
   tanks_danar_jugador(dano)     impacto de bala enemiga      restar HP, derrota en 0
   tanks_danar_enemigo(e, dano)  impacto de bala del jugador  restar HP, puntos, reemplazo
-  tanks_danar_boss(dano)        impacto de bala en el jefe   dano acumulativo, victoria en 0
+  tanks_danar_boss(dano)        impacto de bala en el jefe   daño acumulativo, victoria en 0
   tanks_recoger_martillo(pu)    jugador entra en el martillo curar sin pasar de max_hp, +50
-  tanks_actualizar_estado()     game_loop (cada vuelta)      comparar puntuacion con
+  tanks_actualizar_estado()     game_loop (cada vuelta)      comparar puntuación con
                                                              target_scores y crear al jefe
 
-Comportamiento de respaldo ya presente en el runtime: dano directo
-al jugador (HP minimo 0, fin del juego en 0), muerte de enemigos con
-puntos y reemplazo, curacion con martillo (+50 puntos) y victoria al
+Comportamiento de respaldo ya presente en el runtime: daño directo
+al jugador (HP mínimo 0, fin del juego en 0), muerte de enemigos con
+puntos y reemplazo, curación con martillo (+50 puntos) y victoria al
 dejar el jefe en 0 HP.
 
 -------------------------------------------------------------
@@ -302,7 +302,7 @@ dejar el jefe en 0 HP.
 Compilador:
   - No se elimino ninguna regla de Tetris ni de Snake.
   - Lo nuevo solo se activa con GAME_TYPE TANKS; DEFINE TANK/BULLET/
-    WALL fuera de Tanks da error semantico claro.
+    WALL fuera de Tanks da error semántico claro.
   - Los .brick anteriores no necesitan ninguna etiqueta nueva.
 JSON:
   - tetris, tetris_remake, snake y snake_evolved no reciben las
@@ -313,20 +313,20 @@ Runtime:
     tanks_*); el tipo de juego se identifica antes de ejecutar nada.
   - Las funciones originales se conservan; no hay dependencias
     externas.
-Entorno: Python 2.7, Tkinter, solo libreria estandar, ejecucion por
+Entorno: Python 2.7, Tkinter, solo librería estándar, ejecución por
 jugar.bat sin cambios.
 
 -------------------------------------------------------------
 8. PRUEBAS
 -------------------------------------------------------------
   - pruebas_compilador.py (unittest): retrocompatibilidad de los
-    cuatro juegos, compilacion de tanks.brick, roles, atributos,
+    cuatro juegos, compilación de tanks.brick, roles, atributos,
     balas/muros/power-ups, TARGET_SCORE y MOVE FORWARD, acciones de
     combate y valores por defecto.
   - Ejecucion: python pruebas_compilador.py   (con Python 2.7)
   - Pruebas manuales (jugar tanks, jugar snake, jugar snake_evolved,
     jugar tetris, jugar tetris_remake): movimiento, disparos, muros,
-    enemigos, martillo, aparicion y derrota del jefe, victoria, y
+    enemigos, martillo, aparición y derrota del jefe, victoria, y
     derrota por HP.
 
 -------------------------------------------------------------
@@ -338,42 +338,8 @@ jugar.bat sin cambios.
     aunque su figura dibujada sea mas grande.
   - FORM, AI y TARGET se validan y quedan en el JSON; el runtime hoy
     solo usa el comportamiento AGGRESSIVE aleatorio para enemigos.
-  - Los eventos de colision del .brick (ON COLLISION_BULLET_*) estan
-    soportados por el compilador y la gramatica; en el runtime las
+  - Los eventos de colisión del .brick (ON COLLISION_BULLET_*) estan
+    soportados por el compilador y la gramática; en el runtime las
     colisiones se resuelven directamente en tanks_resolver_impacto_bala.
 -------------------------------------------------------------
-8. AJUSTES Y PRUEBAS DE LA REVISION TECNICA
--------------------------------------------------------------
-Se aplicaron los siguientes ajustes sobre la version recibida:
 
-  - El dibujo de los tanques ahora respeta FORM por cada celda activa
-    de STATE: RECTANGLE/SQUARE dibuja rectangulos, CIRCULAR dibuja
-    ovalos y TRIANGULAR dibuja triangulos orientados segun DIR.
-  - STATE sigue siendo la fuente unica de ocupacion para dimensiones,
-    movimiento y colisiones. La matriz del FINAL_BOSS (5 x 4) se usa
-    para dibujarlo y para calcular el area real de impactos.
-  - El compilador ahora advierte si la matriz del jefe no supera a las
-    matrices enemigas en alto, ancho y cantidad de celdas ocupadas.
-  - Se corrigio la produccion BNF de SPAWN para distinguir PLAYER,
-    ENEMY, WALL, POWERUP y BOSS de acuerdo con las formas que acepta
-    el parser.
-  - Se eliminaron comentarios obsoletos de tanks.brick que indicaban
-    que las construcciones aun no estaban implementadas.
-
-Pruebas ejecutadas durante esta revision:
-  - 46 pruebas de compiler.py: compilacion de Tetris, Tetris Remake,
-    Snake, Snake Evolved y Tanks; validaciones semanticas y JSON.
-  - 9 pruebas unitarias del runtime: matrices/colisiones, dimensiones
-    reales del jefe, limites de la cuadricula, dibujo CIRCULAR y
-    TRIANGULAR, transicion TARGET_SCORE y victoria al destruir el jefe.
-  - Verificacion sintactica de runtime.py y pruebas_runtime_tanks.py
-    con el interprete Python 3 disponible en el entorno de revision.
-
-Limitacion de entorno: Python 2.7 no esta instalado en el entorno de
-revision. Las 46 pruebas del compilador se ejecutaron en una copia
-compatible temporal para Python 3 (solo se adaptaron las instrucciones
-print de consola); el codigo entregado conserva la sintaxis Python 2.7.
-La ejecucion grafica real con Tkinter y la prueba final de los cuatro
-juegos deben confirmarse en el equipo Windows/Python 2.7 del grupo.
-
-El video de victoria final queda pendiente de grabacion por el equipo.
