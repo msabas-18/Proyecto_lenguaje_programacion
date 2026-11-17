@@ -51,7 +51,8 @@ Que hace el juego:
   gramaticas bnf\tanks.bnf     nuevo       gramatica formal
   compiler.py                  modificado  481 -> 895 lineas
   runtime.py                   modificado  930 -> 1418 lineas
-  pruebas_compilador.py        nuevo       pruebas automaticas (45 casos)
+  pruebas_compilador.py        actualizado pruebas automaticas (46 casos)
+  pruebas_runtime_tanks.py     nuevo       pruebas de runtime (9 casos)
   tanks_architecture.txt       nuevo       este documento
   jugar.bat                    SIN cambios (ya acepta "jugar tanks")
   Sin cambios: snake/tetris (.brick y .bnf), snake_evolved, tetris_remake.
@@ -340,3 +341,39 @@ jugar.bat sin cambios.
   - Los eventos de colision del .brick (ON COLLISION_BULLET_*) estan
     soportados por el compilador y la gramatica; en el runtime las
     colisiones se resuelven directamente en tanks_resolver_impacto_bala.
+-------------------------------------------------------------
+8. AJUSTES Y PRUEBAS DE LA REVISION TECNICA
+-------------------------------------------------------------
+Se aplicaron los siguientes ajustes sobre la version recibida:
+
+  - El dibujo de los tanques ahora respeta FORM por cada celda activa
+    de STATE: RECTANGLE/SQUARE dibuja rectangulos, CIRCULAR dibuja
+    ovalos y TRIANGULAR dibuja triangulos orientados segun DIR.
+  - STATE sigue siendo la fuente unica de ocupacion para dimensiones,
+    movimiento y colisiones. La matriz del FINAL_BOSS (5 x 4) se usa
+    para dibujarlo y para calcular el area real de impactos.
+  - El compilador ahora advierte si la matriz del jefe no supera a las
+    matrices enemigas en alto, ancho y cantidad de celdas ocupadas.
+  - Se corrigio la produccion BNF de SPAWN para distinguir PLAYER,
+    ENEMY, WALL, POWERUP y BOSS de acuerdo con las formas que acepta
+    el parser.
+  - Se eliminaron comentarios obsoletos de tanks.brick que indicaban
+    que las construcciones aun no estaban implementadas.
+
+Pruebas ejecutadas durante esta revision:
+  - 46 pruebas de compiler.py: compilacion de Tetris, Tetris Remake,
+    Snake, Snake Evolved y Tanks; validaciones semanticas y JSON.
+  - 9 pruebas unitarias del runtime: matrices/colisiones, dimensiones
+    reales del jefe, limites de la cuadricula, dibujo CIRCULAR y
+    TRIANGULAR, transicion TARGET_SCORE y victoria al destruir el jefe.
+  - Verificacion sintactica de runtime.py y pruebas_runtime_tanks.py
+    con el interprete Python 3 disponible en el entorno de revision.
+
+Limitacion de entorno: Python 2.7 no esta instalado en el entorno de
+revision. Las 46 pruebas del compilador se ejecutaron en una copia
+compatible temporal para Python 3 (solo se adaptaron las instrucciones
+print de consola); el codigo entregado conserva la sintaxis Python 2.7.
+La ejecucion grafica real con Tkinter y la prueba final de los cuatro
+juegos deben confirmarse en el equipo Windows/Python 2.7 del grupo.
+
+El video de victoria final queda pendiente de grabacion por el equipo.

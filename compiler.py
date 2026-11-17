@@ -859,8 +859,18 @@ class Parser:
         if not victoria:
             self.advertencias.append("Advertencia: ON DESTROY_BOSS no tiene VICTORY; el jugador no podra ganar")
         celdas = lambda nombre: sum([sum(f) for f in self.tanques[nombre]['estados'][0]])
-        if enemigos and celdas(jefe) <= max([celdas(n) for n in enemigos]):
-            self.advertencias.append("Advertencia: el jefe '" + jefe + "' no es mas grande que los enemigos")
+        matriz_jefe = self.tanques[jefe]['estados'][0]
+        alto_jefe, ancho_jefe = len(matriz_jefe), len(matriz_jefe[0])
+        dimensiones_enemigos = []
+        for nombre in enemigos:
+            matriz_enemigo = self.tanques[nombre]['estados'][0]
+            dimensiones_enemigos.append((len(matriz_enemigo), len(matriz_enemigo[0])))
+        mayor_alto = max([d[0] for d in dimensiones_enemigos]) if dimensiones_enemigos else 0
+        mayor_ancho = max([d[1] for d in dimensiones_enemigos]) if dimensiones_enemigos else 0
+        if enemigos and (celdas(jefe) <= max([celdas(n) for n in enemigos]) or
+                         alto_jefe <= mayor_alto or ancho_jefe <= mayor_ancho):
+            self.advertencias.append("Advertencia: la matriz del jefe '" + jefe +
+                                     "' deberia ser mas grande en alto, ancho y celdas ocupadas que la de los enemigos")
         if self.ast['powerups'] and not sum([p['chance'] for p in self.ast['powerups'].values()]):
             self.advertencias.append("Advertencia: todos los POWERUP tienen CHANCE 0")
 

@@ -9,6 +9,8 @@
 # frutas venenosas, nubes, power-up "No Morir" con temporizador y panel de nivel. Todo el codigo
 # nuevo lleva el comentario "# ACT4:". Sin "levels" en el JSON el Snake se comporta como el original.
 # Al cambiar de nivel (tambien al subir solo) el escudo activo conserva su tiempo restante.
+# ACT5: STATE controla la ocupacion/colision y FORM (RECTANGLE/SQUARE/CIRCULAR/TRIANGULAR)
+# controla la primitiva grafica de cada celda ocupada.
 
 import sys
 import json
@@ -285,8 +287,8 @@ class Juego:
             for accion in self.datos_juego['events'][nombre_evento]:
                 verbo, objeto = accion.get('accion'), accion.get('objeto')
                 
-                if verbo == 'INCREASE_SCORE': self.puntuacion += int(objeto)
-                if verbo == 'GAME_OVER': self.juego_terminado = True
+                if self.tipo_juego != 'TANKS' and verbo == 'INCREASE_SCORE': self.puntuacion += int(objeto)
+                if self.tipo_juego != 'TANKS' and verbo == 'GAME_OVER': self.juego_terminado = True
 
                 if self.tipo_juego == 'TETRIS':
                     if verbo == 'SPAWN': self.tetris_spawn_pieza()
@@ -993,6 +995,36 @@ class Juego:
         self.tanks_player_moving = False
         self.tanks_boss_spawned = False
         self.tanks_victoria = False
+        self.tanks_event_context = {}
+        roles = self.datos_juego.get('tank_roles', {})
+        self.tanks_player_def = roles.get('player', 'PLAYER_TANK')
+        self.tanks_boss_def = roles.get('boss', 'FINAL_BOSS')
+
+    def _tanks_evento_con_contexto(self, nombre, contexto):
+        anterior = self.tanks_event_context
+        self.tanks_event_context = contexto or {}
+        try:
+            if nombre in self.datos_juego.get('events', {}):
+                self.ejecutar_evento(nombre)
+                return True
+            return False
+        finally:
+            self.tanks_event_context = anterior
+
+    def _tanks_matriz(self, entidad):
+        estados = entidad.get('estados', [])
+        if estados and estados[0]:
+            return estados[0]
+        return [[1]]
+
+    def _tanks_dimensiones(self, entidad):
+        matriz = self._tanks_matriz(entidad)
+        return (len(matriz[0]), len(matriz))
+
+    def _tanks_contiene(self, entidad, x, y):
+        matriz = self._tanks_matriz(entidad)
+        ox, oy = x - entidad['x'], y - entidad['y']
+        return (0 <= oy < len(matriz) and 0 <= ox < len(matriz[oy]) and bool(matriz[oy][ox]))
 
     def tanks_ejecutar_accion(self, accion):
         verbo = accion.get('accion')
@@ -1005,7 +1037,7 @@ class Juego:
                 self.tanks_spawn_jugador(coords)
             elif objeto == 'ENEMY' or (objeto and objeto.startswith('ENEMY')):
                 nombre_def = params[0] if params and isinstance(params[0], basestring) and params[0] != 'RANDOM' else 'SCOUT_TANK'
-                if nombre_def not in self.defs_tanks:
+                if nombre_def == 'RANDOM' or nombre_def not in self.defs_tanks:
                     enemigos_disp = [k for k, v in self.defs_tanks.items() if v.get('type') == 'ENEMY']
                     nombre_def = random.choice(enemigos_disp) if enemigos_disp else 'SCOUT_TANK'
                 self.tanks_spawn_enemigo(nombre_def, coords)
@@ -1040,6 +1072,71 @@ class Juego:
             elif objeto == 'BOSS' and self.tanks_boss:
                 self.tanks_actualizar_boss(tipo_bala or 'BOSS_BULLET')
 
+        elif verbo == 'DAMAGE':
+            valor = params[0] if params else 0
+            if valor == 'BULLET_DAMAGE':
+                valor = self.tanks_event_context.get('bullet_damage', 0)
+            try:
+                valor = int(valor)
+            except (TypeError, ValueError):
+                valor = 0
+            objetivo = self.tanks_event_context.get(objeto.lower())
+            if objeto == 'PLAYER':
+                self.tanks_danar_jugador(valor)
+            elif objeto == 'ENEMY' and objetivo:
+                self.tanks_danar_enemigo(objetivo, valor)
+            elif objeto == 'BOSS' and self.tanks_boss:
+                self.tanks_danar_boss(valor)
+            elif objeto == 'WALL' and objetivo:
+                self.tanks_danar_muro(objetivo, valor)
+
+        elif verbo == 'HEAL':
+            valor = params[0] if params else 0
+            if valor == 'POWERUP_VALUE':
+                powerup = self.tanks_event_context.get('powerup', {})
+                valor = powerup.get('heal', 25)
+            if self.tank_jugador:
+                self.tank_jugador['hp'] = min(self.tank_jugador.get('max_hp', 100),
+                                              self.tank_jugador.get('hp', 0) + int(valor))
+
+        elif verbo == 'INCREASE_SCORE':
+            valor = objeto
+            if valor == 'ENEMY_POINTS':
+                valor = self.tanks_event_context.get('enemy', {}).get('points', 0)
+            try:
+                self.puntuacion += int(valor)
+            except (TypeError, ValueError):
+                pass
+
+        elif verbo == 'DESTROY':
+            objetivo = self.tanks_event_context.get(objeto.lower()) if objeto else None
+            if objeto == 'ENEMY' and objetivo in self.tanks_enemigos:
+                self.tanks_enemigos.remove(objetivo)
+            elif objeto == 'BOSS':
+                self.tanks_boss = None
+            elif objeto == 'WALL' and objetivo:
+                self.tanks_muros.pop((objetivo.get('x'), objetivo.get('y')), None)
+            elif objeto == 'POWERUP':
+                powerup = self.tanks_event_context.get('powerup')
+                if powerup in self.tanks_powerups:
+                    self.tanks_powerups.remove(powerup)
+
+        elif verbo == 'VICTORY':
+            self.tanks_victoria = True
+            self.juego_terminado = True
+
+        elif verbo == 'GAME_OVER_IF':
+            if self.tank_jugador and self.tank_jugador.get('hp', 0) <= 0:
+                self.tanks_victoria = False
+                self.juego_terminado = True
+
+        elif verbo == 'GAME_OVER':
+            self.tanks_victoria = False
+            self.juego_terminado = True
+
+        elif verbo == 'SET' and objeto == 'PLAYER':
+            self.tank_jugador['invulnerable'] = (params[-1] == 'ON') if self.tank_jugador else False
+
     def _tanks_extraer_coords(self, params):
         for p in params:
             if isinstance(p, (list, tuple)) and len(p) == 2:
@@ -1047,20 +1144,16 @@ class Juego:
         return None
 
     def tanks_spawn_jugador(self, coords=None):
-        cfg = self.defs_tanks.get('PLAYER_TANK', {})
+        cfg = self.defs_tanks.get(self.tanks_player_def, {})
         x, y = coords if coords else (self.ancho // 2, self.alto - 2)
+        matriz = self._tanks_matriz(cfg)
         self.tank_jugador = {
-            'id': 'PLAYER',
-            'type': 'PLAYER',
-            'x': x,
-            'y': y,
-            'dir': 'UP',
-            'color': cfg.get('color', '#20B2AA'),
-            'hp': int(cfg.get('hp', 100)),
-            'max_hp': int(cfg.get('hp', 100)),
-            'speed': int(cfg.get('speed', 1)),
-            'damage': int(cfg.get('damage', 20)),
-            'form': cfg.get('form', 'RECTANGLE')
+            'id': 'PLAYER', 'def_name': self.tanks_player_def, 'type': 'PLAYER',
+            'x': x, 'y': y, 'dir': 'UP', 'color': cfg.get('color', '#20B2AA'),
+            'hp': int(cfg.get('hp', 100)), 'max_hp': int(cfg.get('hp', 100)),
+            'speed': int(cfg.get('speed', 1)), 'damage': int(cfg.get('damage', 20)),
+            'form': cfg.get('form', 'RECTANGLE'), 'estados': cfg.get('estados', [matriz]),
+            'invulnerable': False
         }
 
     def tanks_spawn_enemigo(self, nombre_def, coords=None):
@@ -1071,40 +1164,30 @@ class Juego:
             return
         self.tanks_enemigos.append({
             'id': nombre_def + '_' + str(len(self.tanks_enemigos)) + '_' + str(random.randint(100, 999)),
-            'def_name': nombre_def,
-            'type': 'ENEMY',
-            'x': coords[0],
-            'y': coords[1],
-            'dir': 'DOWN',
-            'color': cfg.get('color', '#E74C3C'),
-            'hp': int(cfg.get('hp', 30)),
-            'speed': int(cfg.get('speed', 1)),
-            'damage': int(cfg.get('damage', 10)),
-            'fire_rate': int(cfg.get('fire_rate', 3)),
-            'points': int(cfg.get('points', 100)),
-            'form': cfg.get('form', 'RECTANGLE'),
-            'tick_acc': 0
+            'def_name': nombre_def, 'type': 'ENEMY', 'x': coords[0], 'y': coords[1],
+            'dir': 'DOWN', 'color': cfg.get('color', '#E74C3C'),
+            'hp': int(cfg.get('hp', 30)), 'speed': int(cfg.get('speed', 1)),
+            'damage': int(cfg.get('damage', 10)), 'fire_rate': int(cfg.get('fire_rate', 3)),
+            'points': int(cfg.get('points', 100)), 'form': cfg.get('form', 'RECTANGLE'),
+            'estados': cfg.get('estados', [[[1]]]), 'tick_acc': 0
         })
 
-    def tanks_spawn_boss(self, nombre_def='FINAL_BOSS', coords=None):
+    def tanks_spawn_boss(self, nombre_def=None, coords=None):
+        nombre_def = nombre_def or self.tanks_boss_def
         cfg = self.defs_tanks.get(nombre_def, {})
-        x, y = coords if coords else (self.ancho // 2, 2)
+        matriz = self._tanks_matriz(cfg)
+        ancho, alto = self._tanks_dimensiones(cfg)
+        x, y = coords if coords else ((self.ancho - ancho) // 2, 2)
+        if x + ancho > self.ancho or y + alto > self.alto:
+            raise ValueError('La matriz del Final Boss excede los limites de la cuadricula')
         self.tanks_boss = {
-            'id': 'FINAL_BOSS',
-            'type': 'BOSS',
-            'x': x,
-            'y': y,
-            'dir': 'DOWN',
-            'color': cfg.get('color', '#7D3C98'),
-            'hp': int(cfg.get('hp', 300)),
-            'max_hp': int(cfg.get('hp', 300)),
-            'speed': int(cfg.get('speed', 1)),
-            'damage': int(cfg.get('damage', 25)),
-            'fire_rate': int(cfg.get('fire_rate', 2)),
-            'points': int(cfg.get('points', 1000)),
-            'form': cfg.get('form', 'SQUARE'),
-            'size': 2,
-            'tick_acc': 0
+            'id': nombre_def, 'def_name': nombre_def, 'type': 'BOSS',
+            'x': x, 'y': y, 'dir': 'DOWN', 'color': cfg.get('color', '#7D3C98'),
+            'hp': int(cfg.get('hp', 300)), 'max_hp': int(cfg.get('hp', 300)),
+            'speed': int(cfg.get('speed', 1)), 'damage': int(cfg.get('damage', 25)),
+            'fire_rate': int(cfg.get('fire_rate', 2)), 'points': int(cfg.get('points', 1000)),
+            'form': cfg.get('form', 'SQUARE'), 'estados': cfg.get('estados', [matriz]),
+            'width': ancho, 'height': alto, 'size': max(ancho, alto), 'tick_acc': 0
         }
         self.tanks_boss_spawned = True
 
@@ -1148,16 +1231,11 @@ class Juego:
     def tanks_celda_bloqueada(self, x, y, ignorar_id=None):
         if (x, y) in self.tanks_muros:
             return True
-        if self.tank_jugador and self.tank_jugador['id'] != ignorar_id:
-            if self.tank_jugador['x'] == x and self.tank_jugador['y'] == y:
-                return True
-        for e in self.tanks_enemigos:
-            if e['id'] != ignorar_id and e['x'] == x and e['y'] == y:
-                return True
-        if self.tanks_boss and self.tanks_boss['id'] != ignorar_id:
-            bx, by = self.tanks_boss['x'], self.tanks_boss['y']
-            bs = self.tanks_boss.get('size', 2)
-            if bx <= x < bx + bs and by <= y < by + bs:
+        entidades = ([self.tank_jugador] if self.tank_jugador else []) + list(self.tanks_enemigos)
+        if self.tanks_boss:
+            entidades.append(self.tanks_boss)
+        for entidad in entidades:
+            if entidad.get('id') != ignorar_id and self._tanks_contiene(entidad, x, y):
                 return True
         return False
 
@@ -1166,33 +1244,47 @@ class Juego:
             return False
         tanque['dir'] = direccion
         dx, dy = self.tanks_dirs[direccion]
-        nx = tanque['x'] + dx
-        ny = tanque['y'] + dy
-        size = tanque.get('size', 1)
-
-        if not (0 <= nx and nx + size <= self.ancho and 0 <= ny and ny + size <= self.alto):
+        nx, ny = tanque['x'] + dx, tanque['y'] + dy
+        ancho, alto = self._tanks_dimensiones(tanque)
+        if not (0 <= nx and nx + ancho <= self.ancho and 0 <= ny and ny + alto <= self.alto):
             return False
 
-        for ox in range(size):
-            for oy in range(size):
-                if self.tanks_celda_bloqueada(nx + ox, ny + oy, ignorar_id=tanque['id']):
-                    return False
+        bloqueado = False
+        for oy, fila in enumerate(self._tanks_matriz(tanque)):
+            for ox, celda in enumerate(fila):
+                if not celda:
+                    continue
+                tx, ty = nx + ox, ny + oy
+                if (tx, ty) in self.tanks_muros:
+                    bloqueado = True
+                    break
+                otros = list(self.tanks_enemigos)
+                if self.tank_jugador:
+                    otros.append(self.tank_jugador)
+                if self.tanks_boss:
+                    otros.append(self.tanks_boss)
+                for otro in otros:
+                    if otro.get('id') != tanque.get('id') and self._tanks_contiene(otro, tx, ty):
+                        if tanque.get('type') == 'PLAYER' and otro.get('type') == 'ENEMY':
+                            self._tanks_evento_con_contexto('ON_COLLISION_PLAYER_ENEMY',
+                                {'player': tanque, 'enemy': otro})
+                        elif tanque.get('type') in ('ENEMY', 'BOSS') and otro.get('type') == 'PLAYER':
+                            self._tanks_evento_con_contexto('ON_COLLISION_PLAYER_ENEMY',
+                                {'player': otro, 'enemy': tanque})
+                        bloqueado = True
+                        break
+                if bloqueado:
+                    break
+            if bloqueado:
+                break
+        if bloqueado:
+            return False
 
-        tanque['x'] = nx
-        tanque['y'] = ny
-
-        if tanque['type'] == 'PLAYER':
+        tanque['x'], tanque['y'] = nx, ny
+        if tanque.get('type') == 'PLAYER':
             for pu in list(self.tanks_powerups):
-                if pu['x'] == nx and pu['y'] == ny:
-                    self.tanks_powerups.remove(pu)
-                    if hasattr(self, 'tanks_recoger_martillo'):
-                        self.tanks_recoger_martillo(pu)
-                    else:
-                        self.tank_jugador['hp'] = min(
-                            self.tank_jugador['max_hp'],
-                            self.tank_jugador['hp'] + pu.get('heal', 25)
-                        )
-                        self.puntuacion += 50
+                if self._tanks_contiene(tanque, pu['x'], pu['y']):
+                    self.tanks_recoger_martillo(pu)
         return True
 
     def tanks_disparar(self, tanque, nombre_bala='PLAYER_BULLET'):
@@ -1200,9 +1292,15 @@ class Juego:
             return
         cfg_bala = self.defs_bullets.get(nombre_bala, {})
         dx, dy = self.tanks_dirs[tanque['dir']]
-        size = tanque.get('size', 1)
-        bx = tanque['x'] + (size // 2) + dx
-        by = tanque['y'] + (size // 2) + dy
+        ancho, alto = self._tanks_dimensiones(tanque)
+        if tanque['dir'] == 'UP':
+            bx, by = tanque['x'] + (ancho // 2), tanque['y'] - 1
+        elif tanque['dir'] == 'DOWN':
+            bx, by = tanque['x'] + (ancho // 2), tanque['y'] + alto
+        elif tanque['dir'] == 'LEFT':
+            bx, by = tanque['x'] - 1, tanque['y'] + (alto // 2)
+        else:
+            bx, by = tanque['x'] + ancho, tanque['y'] + (alto // 2)
 
         if not (0 <= bx < self.ancho and 0 <= by < self.alto):
             return
@@ -1242,56 +1340,44 @@ class Juego:
 
     def tanks_resolver_impacto_bala(self, bala):
         pos = (bala['x'], bala['y'])
+        contexto_bala = {'bullet': bala, 'bullet_damage': bala.get('damage', 0)}
 
-        # 1. Colision con muros
         if pos in self.tanks_muros:
             muro = self.tanks_muros[pos]
-            if muro['destructible']:
-                muro['hp'] -= bala['damage']
-                if muro['hp'] <= 0:
-                    del self.tanks_muros[pos]
+            contexto = dict(contexto_bala)
+            contexto['wall'] = muro
+            ejecutado = self._tanks_evento_con_contexto('ON_COLLISION_BULLET_WALL', contexto)
+            if not ejecutado and muro.get('destructible'):
+                self.tanks_danar_muro(muro, bala.get('damage', 0))
             return True
 
-        # 2. Bala del jugador contra enemigos o Final Boss
         if bala['owner'] == 'PLAYER':
             for enemigo in list(self.tanks_enemigos):
-                if enemigo['x'] == bala['x'] and enemigo['y'] == bala['y']:
-                    if hasattr(self, 'tanks_danar_enemigo'):
-                        self.tanks_danar_enemigo(enemigo, bala['damage'])
-                    else:
-                        enemigo['hp'] -= bala['damage']
-                        if enemigo['hp'] <= 0:
-                            self.tanks_enemigos.remove(enemigo)
-                            self.puntuacion += enemigo.get('points', 100)
-                            self.tanks_spawn_enemigo(enemigo.get('def_name', 'SCOUT_TANK'))
+                if self._tanks_contiene(enemigo, bala['x'], bala['y']):
+                    contexto = dict(contexto_bala)
+                    contexto['enemy'] = enemigo
+                    ejecutado = self._tanks_evento_con_contexto('ON_COLLISION_BULLET_ENEMY', contexto)
+                    if not ejecutado:
+                        self.tanks_danar_enemigo(enemigo, bala.get('damage', 0))
                     return True
 
-            if self.tanks_boss:
-                bx, by = self.tanks_boss['x'], self.tanks_boss['y']
-                bs = self.tanks_boss.get('size', 2)
-                if bx <= bala['x'] < bx + bs and by <= bala['y'] < by + bs:
-                    if hasattr(self, 'tanks_danar_boss'):
-                        self.tanks_danar_boss(bala['damage'])
-                    else:
-                        self.tanks_boss['hp'] -= bala['damage']
-                        if self.tanks_boss['hp'] <= 0:
-                            self.puntuacion += self.tanks_boss.get('points', 1000)
-                            self.tanks_boss = None
-                            self.tanks_victoria = True
-                            self.juego_terminado = True
-                    return True
-
-        # 3. Bala enemiga o del Boss contra el jugador
-        elif bala['owner'] in ('ENEMY', 'BOSS') and self.tank_jugador:
-            if self.tank_jugador['x'] == bala['x'] and self.tank_jugador['y'] == bala['y']:
-                if hasattr(self, 'tanks_danar_jugador'):
-                    self.tanks_danar_jugador(bala['damage'])
-                else:
-                    self.tank_jugador['hp'] = max(0, self.tank_jugador['hp'] - bala['damage'])
-                    if self.tank_jugador['hp'] <= 0:
-                        self.juego_terminado = True
+            if self.tanks_boss and self._tanks_contiene(self.tanks_boss, bala['x'], bala['y']):
+                contexto = dict(contexto_bala)
+                contexto['boss'] = self.tanks_boss
+                ejecutado = self._tanks_evento_con_contexto('ON_COLLISION_BULLET_BOSS', contexto)
+                if not ejecutado:
+                    self.tanks_danar_boss(bala.get('damage', 0))
                 return True
 
+        elif bala['owner'] in ('ENEMY', 'BOSS') and self.tank_jugador:
+            if self._tanks_contiene(self.tank_jugador, bala['x'], bala['y']):
+                if not self.tank_jugador.get('invulnerable'):
+                    contexto = dict(contexto_bala)
+                    contexto['player'] = self.tank_jugador
+                    ejecutado = self._tanks_evento_con_contexto('ON_COLLISION_BULLET_PLAYER', contexto)
+                    if not ejecutado:
+                        self.tanks_danar_jugador(bala.get('damage', 0))
+                return True
         return False
 
     def tanks_actualizar_enemigos(self, nombre_bala='ENEMY_BULLET'):
@@ -1346,36 +1432,54 @@ class Juego:
 
     def tanks_dibujar_tanque(self, tanque):
         ts = self.taman_celda
-        size = tanque.get('size', 1)
-        x1 = tanque['x'] * ts
-        y1 = tanque['y'] * ts
-        x2 = x1 + ts * size
-        y2 = y1 + ts * size
-        cx = (x1 + x2) / 2.0
-        cy = (y1 + y2) / 2.0
-        color = tanque['color']
+        matriz = self._tanks_matriz(tanque)
+        alto, ancho = len(matriz), len(matriz[0])
+        x1, y1 = tanque['x'] * ts, tanque['y'] * ts
+        x2, y2 = x1 + ancho * ts, y1 + alto * ts
+        cx, cy = (x1 + x2) / 2.0, (y1 + y2) / 2.0
+        color = tanque.get('color', '#20B2AA')
         forma = tanque.get('form', 'RECTANGLE')
-
-        if forma == 'TRIANGULAR':
-            d = tanque['dir']
-            if d == 'UP':
-                pts = [cx, y1 + 2, x1 + 2, y2 - 2, x2 - 2, y2 - 2]
-            elif d == 'DOWN':
-                pts = [cx, y2 - 2, x1 + 2, y1 + 2, x2 - 2, y1 + 2]
-            elif d == 'LEFT':
-                pts = [x1 + 2, cy, x2 - 2, y1 + 2, x2 - 2, y2 - 2]
-            else:
-                pts = [x2 - 2, cy, x1 + 2, y1 + 2, x1 + 2, y2 - 2]
-            self.canvas.create_polygon(pts, fill=color, outline='#000000', width=2)
-        else:
-            self.canvas.create_rectangle(x1 + 2, y1 + 2, x2 - 2, y2 - 2,
-                                         fill=color, outline='#000000', width=2)
-
-        r_torreta = (ts * size) * 0.22
+        # La matriz STATE define que celdas ocupa la entidad; FORM define
+        # como se dibuja cada celda ocupada. Asi se conserva la misma
+        # geometria para dibujo, movimiento y deteccion de impactos.
+        for oy, fila in enumerate(matriz):
+            for ox, celda in enumerate(fila):
+                if not celda:
+                    continue
+                px, py = x1 + ox * ts, y1 + oy * ts
+                margen = max(1, int(ts * 0.06))
+                if forma == 'CIRCULAR':
+                    self.canvas.create_oval(px + margen, py + margen,
+                                            px + ts - margen, py + ts - margen,
+                                            fill=color, outline='#000000', width=1)
+                elif forma == 'TRIANGULAR':
+                    # El triangulo apunta hacia la direccion actual del tanque.
+                    if tanque.get('dir', 'UP') == 'DOWN':
+                        puntos = [px + ts / 2.0, py + ts - margen,
+                                  px + margen, py + margen,
+                                  px + ts - margen, py + margen]
+                    elif tanque.get('dir', 'UP') == 'LEFT':
+                        puntos = [px + margen, py + ts / 2.0,
+                                  px + ts - margen, py + margen,
+                                  px + ts - margen, py + ts - margen]
+                    elif tanque.get('dir', 'UP') == 'RIGHT':
+                        puntos = [px + ts - margen, py + ts / 2.0,
+                                  px + margen, py + margen,
+                                  px + margen, py + ts - margen]
+                    else:
+                        puntos = [px + ts / 2.0, py + margen,
+                                  px + margen, py + ts - margen,
+                                  px + ts - margen, py + ts - margen]
+                    self.canvas.create_polygon(puntos, fill=color, outline='#000000', width=1)
+                else:
+                    self.canvas.create_rectangle(px + margen, py + margen,
+                                                 px + ts - margen, py + ts - margen,
+                                                 fill=color, outline='#000000', width=1)
+        r_torreta = max(4, min(ancho, alto) * ts * 0.12)
         self.canvas.create_oval(cx - r_torreta, cy - r_torreta, cx + r_torreta, cy + r_torreta,
                                 fill='#222222', outline='#FFFFFF')
-        ancho_c = max(3, int((ts * size) * 0.18))
-        d = tanque['dir']
+        ancho_c = max(3, int(ts * 0.18))
+        d = tanque.get('dir', 'UP')
         if d == 'UP':
             c_coords = (cx - ancho_c / 2.0, y1, cx + ancho_c / 2.0, cy)
         elif d == 'DOWN':
@@ -1414,49 +1518,65 @@ class Juego:
         self.tanks_martillo_t = None          # hora en que se recogio el ultimo martillo
 
     def tanks_danar_jugador(self, dano):
-        # ACT5: resta resistencia al jugador; sin HP -> derrota
         self._tanks_combate_init()
-        if not self.tank_jugador or self.juego_terminado:
+        if not self.tank_jugador or self.juego_terminado or self.tank_jugador.get('invulnerable'):
             return
         self.tank_jugador['hp'] = max(0, self.tank_jugador['hp'] - int(dano))
-        if self.tank_jugador['hp'] <= 0:
+        ejecutado = self._tanks_evento_con_contexto('ON_PLAYER_HIT', {'player': self.tank_jugador})
+        if not ejecutado and self.tank_jugador['hp'] <= 0:
             self.tanks_victoria = False
             self.juego_terminado = True
 
     def tanks_danar_enemigo(self, enemigo, dano):
-        # ACT5: resistencia del enemigo; al llegar a 0 se destruye y suma sus puntos
         self._tanks_combate_init()
+        if enemigo not in self.tanks_enemigos:
+            return
         enemigo['hp'] -= int(dano)
         if enemigo['hp'] > 0:
             return
-        if enemigo in self.tanks_enemigos:
-            self.tanks_enemigos.remove(enemigo)
-        self.puntuacion += int(enemigo.get('points', 100))
-        # Mientras el jefe no haya aparecido, un enemigo destruido se reemplaza
-        if not self.tanks_boss_spawned:
-            self.tanks_spawn_enemigo(enemigo.get('def_name', 'SCOUT_TANK'))
+        self.tanks_enemigos.remove(enemigo)
+        ejecutado = self._tanks_evento_con_contexto('ON_DESTROY_ENEMY', {'enemy': enemigo})
+        if not ejecutado:
+            self.puntuacion += int(enemigo.get('points', 100))
+            if not self.tanks_boss_spawned:
+                self.tanks_spawn_enemigo(enemigo.get('def_name', 'SCOUT_TANK'))
 
     def tanks_danar_boss(self, dano):
-        # ACT5: dano acumulativo al Final Boss; con 0 HP -> puntos y victoria
         self._tanks_combate_init()
         if not self.tanks_boss:
             return
-        self.tanks_boss['hp'] -= int(dano)
-        if self.tanks_boss['hp'] > 0:
+        jefe = self.tanks_boss
+        jefe['hp'] -= int(dano)
+        if jefe['hp'] > 0:
             return
-        self.puntuacion += int(self.tanks_boss.get('points', 1000))
         self.tanks_boss = None
-        self.tanks_victoria = True
-        self.juego_terminado = True
+        ejecutado = self._tanks_evento_con_contexto('ON_DESTROY_BOSS', {'boss': jefe})
+        if not ejecutado:
+            self.puntuacion += int(jefe.get('points', 1000))
+            self.tanks_victoria = True
+            self.juego_terminado = True
+
+    def tanks_danar_muro(self, muro, dano):
+        if not muro.get('destructible'):
+            return
+        muro['hp'] -= int(dano)
+        if muro['hp'] <= 0:
+            for posicion, valor in list(self.tanks_muros.items()):
+                if valor is muro:
+                    del self.tanks_muros[posicion]
+                    break
 
     def tanks_recoger_martillo(self, pu):
-        # ACT5: el martillo recupera 'heal' puntos de HP sin pasar del maximo
         self._tanks_combate_init()
-        jugador = self.tank_jugador
-        if not jugador:
-            return
-        jugador['hp'] = min(jugador['max_hp'], jugador['hp'] + int(pu.get('heal', 25)))
-        self.ejecutar_evento('ON_HAMMER_COLLECTED')   # el .brick define los puntos extra
+        ejecutado = self._tanks_evento_con_contexto('ON_COLLISION_PLAYER_POWERUP',
+            {'player': self.tank_jugador, 'powerup': pu})
+        if not ejecutado and self.tank_jugador:
+            self.tank_jugador['hp'] = min(self.tank_jugador['max_hp'],
+                                         self.tank_jugador['hp'] + int(pu.get('heal', 25)))
+            self.puntuacion += 50
+        if pu in self.tanks_powerups:
+            self.tanks_powerups.remove(pu)
+        self._tanks_evento_con_contexto('ON_HAMMER_COLLECTED', {'powerup': pu})
         self.tanks_martillo_t = time.time()
 
     def _tanks_nombre_martillo(self):
